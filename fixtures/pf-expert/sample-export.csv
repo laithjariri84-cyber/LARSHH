@@ -1,0 +1,6 @@
+Reference,Listing State,Property Type,Rent / Sale,Price,Bedrooms,Bathrooms,Size,Location,Agent,Quality Score,Currency
+PF-RAK-001,Active,Apartment,Sale,1250000,2,2,1450,"Marina Heights, Al Hamra Village, Ras Al Khaimah, UAE",Ahmed Al Mansoori,85,AED
+PF-RAK-002,Active,Villa,Rent,95000,4,5,3200,"Palm Views, Mina Al Arab, Ras Al Khaimah, UAE",Sara Khan,72,AED
+PF-RAK-003,Draft,Townhouse,Sale,890000,3,3,2100,"Golf Apartments, Al Hamra Village, Ras Al Khaimah, UAE",,60,AED
+PF-RAK-004,Active,Penthouse,Sale,,5,6,4500,"Bay Residences, Mina Al Arab, Ras Al Khaimah, UAE",Omar Hassan,90,AED
+PF-RAK-005,Active,Office,Rent,180000,,,850,"Business Bay Tower, Al Nakheel, Ras Al Khaimah, UAE",Fatima Ali,55,AED

@@ -1,0 +1,847 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PRODUCTION SCHEMA — LARSSH
+//
+// Design goals:
+// 1. Property = permanent physical asset (import once, change rarely)
+// 2. Listing  = dynamic market offer (PF Expert import, Salesforce sync)
+// 3. Location hierarchy denormalized on Property for search without deep joins
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── Organization & platform users ───────────────────────────────────────────
+
+model Organization {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  slug            String   @unique
+  defaultCurrency String   @default("USD") @map("default_currency") @db.Char(3)
+  settings        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  users             User[]
+  masterCommunities MasterCommunity[]
+
+  @@index([slug])
+  @@map("organizations")
+}
+
+model User {
+  id             String     @id @db.Uuid
+  organizationId String     @map("organization_id") @db.Uuid
+  email          String     @unique
+  fullName       String?    @map("full_name")
+  avatarUrl      String?    @map("avatar_url")
+  status         UserStatus @default(ACTIVE)
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  organization      Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  roleAssignments   UserRoleAssignment[]
+  agent             Agent?
+  assignedTasks     Task[]               @relation("TaskAssigneeUser")
+  propertyNotes     PropertyNote[]       @relation("NoteAuthor")
+  uploadedDocuments Document[]           @relation("DocumentUploader")
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+  @@map("users")
+}
+
+model UserRoleAssignment {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      UserRole
+  grantedAt DateTime @default(now()) @map("granted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@index([userId])
+  @@index([role])
+  @@map("user_role_assignments")
+}
+
+model Agent {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @unique @map("user_id") @db.Uuid
+  phone         String?
+  licenseNumber String?  @map("license_number")
+  agencyName    String?  @map("agency_name")
+  salesforceId  String?  @unique @map("salesforce_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listings Listing[]
+  deals    Deal[]
+  offers   Offer[]
+  viewings Viewing[]
+  tasks    Task[]    @relation("TaskAssigneeAgent")
+
+  @@index([userId])
+  @@index([salesforceId])
+  @@map("agents")
+}
+
+// ─── Location hierarchy ──────────────────────────────────────────────────────
+// MasterCommunity → Community → Building → Property (3 FKs on Property)
+
+model MasterCommunity {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  slug           String   @unique
+  description    String?
+  city           String
+  state          String
+  country        String   @default("AE")
+  postalCode     String?  @map("postal_code")
+  latitude       Decimal? @db.Decimal(10, 7)
+  longitude      Decimal? @db.Decimal(10, 7)
+  pfExpertRef    String?  @unique @map("pf_expert_ref")
+  salesforceId   String?  @unique @map("salesforce_id")
+  metadata       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  communities  Community[]
+  properties   Property[]
+
+  @@index([organizationId])
+  @@index([organizationId, name])
+  @@index([city, state])
+  @@index([pfExpertRef])
+  @@index([salesforceId])
+  @@map("master_communities")
+}
+
+model Community {
+  id                String   @id @default(uuid()) @db.Uuid
+  masterCommunityId String   @map("master_community_id") @db.Uuid
+  name              String
+  slug              String
+  description       String?
+  city              String
+  state             String
+  country           String   @default("AE")
+  postalCode        String?  @map("postal_code")
+  latitude          Decimal? @db.Decimal(10, 7)
+  longitude         Decimal? @db.Decimal(10, 7)
+  pfExpertRef       String?  @unique @map("pf_expert_ref")
+  salesforceId      String?  @unique @map("salesforce_id")
+  metadata          Json?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  masterCommunity MasterCommunity @relation(fields: [masterCommunityId], references: [id], onDelete: Restrict)
+  buildings       Building[]
+  properties      Property[]
+
+  @@unique([masterCommunityId, slug])
+  @@index([masterCommunityId])
+  @@index([masterCommunityId, name])
+  @@index([city, state])
+  @@index([pfExpertRef])
+  @@index([salesforceId])
+  @@map("communities")
+}
+
+model Building {
+  id           String   @id @default(uuid()) @db.Uuid
+  communityId  String   @map("community_id") @db.Uuid
+  name         String
+  code         String?
+  addressLine1 String   @map("address_line1")
+  addressLine2 String?  @map("address_line2")
+  city         String
+  state        String
+  postalCode   String   @map("postal_code")
+  country      String   @default("AE")
+  totalFloors  Int?     @map("total_floors")
+  totalUnits   Int?     @map("total_units")
+  yearBuilt    Int?     @map("year_built")
+  pfExpertRef  String?  @unique @map("pf_expert_ref")
+  salesforceId String?  @unique @map("salesforce_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  community  Community  @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  properties Property[]
+
+  @@index([communityId])
+  @@index([communityId, name])
+  @@index([communityId, code])
+  @@index([pfExpertRef])
+  @@index([salesforceId])
+  @@map("buildings")
+}
+
+// ─── Property (permanent asset data) ─────────────────────────────────────────
+
+model Property {
+  id                String       @id @default(uuid()) @db.Uuid
+  masterCommunityId String       @map("master_community_id") @db.Uuid
+  communityId       String       @map("community_id") @db.Uuid
+  buildingId        String       @map("building_id") @db.Uuid
+  ownerId           String?      @map("owner_id") @db.Uuid
+
+  /// Business key — stable across imports (e.g. DXB-MBR-1204)
+  propertyCode String       @unique @map("property_code")
+  unitNumber   String?      @map("unit_number")
+  propertyType PropertyType @map("property_type")
+  bedrooms     Int?
+  bathrooms    Decimal?     @db.Decimal(3, 1)
+  /// Internal area in square feet (PF Expert "Area")
+  areaSqft     Decimal?     @map("area_sqft") @db.Decimal(10, 2)
+  view         ViewType?
+  furnishing   Furnishing?
+  floor        Int?
+  latitude     Decimal?     @db.Decimal(10, 7)
+  longitude    Decimal?     @db.Decimal(10, 7)
+
+  salesforceId String?  @unique @map("salesforce_id")
+  version      Int      @default(1)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  masterCommunity    MasterCommunity      @relation(fields: [masterCommunityId], references: [id], onDelete: Restrict)
+  community          Community            @relation(fields: [communityId], references: [id], onDelete: Restrict)
+  building           Building             @relation(fields: [buildingId], references: [id], onDelete: Restrict)
+  owner              Owner?               @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  listings           Listing[]
+  priceHistory       PriceHistory[]
+  viewings           Viewing[]
+  offers             Offer[]
+  documents          Document[]
+  photos             Photo[]
+  propertyImages     PropertyImage[]
+  videos             Video[]
+  floorPlans         FloorPlan[]
+  notes              PropertyNote[]
+  leases             Lease[]
+  deals              Deal[]
+  tasks              Task[]
+  marketStatistics   MarketStatistics[]
+  subjectComparables ComparableProperty[] @relation("SubjectComparables")
+  compComparables    ComparableProperty[] @relation("CompComparables")
+
+  @@index([propertyCode])
+  @@index([masterCommunityId])
+  @@index([communityId])
+  @@index([buildingId])
+  @@index([communityId, bedrooms])
+  @@index([buildingId, bedrooms])
+  @@index([bedrooms])
+  @@index([propertyType, bedrooms])
+  @@index([salesforceId])
+  @@index([deletedAt])
+  @@map("properties")
+}
+
+// ─── Listing (dynamic market data — PF Expert + Salesforce) ──────────────────
+
+model Listing {
+  id         String @id @default(uuid()) @db.Uuid
+  propertyId String @map("property_id") @db.Uuid
+  agentId    String @map("agent_id") @db.Uuid
+
+  marketingTitle String        @map("marketing_title")
+  description    String?
+  askingPrice    Decimal       @map("asking_price") @db.Decimal(12, 2)
+  currency       String        @default("AED") @db.Char(3)
+  listingType    ListingType   @map("listing_type")
+  status         ListingStatus @default(DRAFT)
+
+  publishedAt DateTime? @map("published_at")
+  expiresAt   DateTime? @map("expires_at")
+
+  /// PF Expert listing reference — upsert key for imports
+  pfExpertReference String? @unique @map("pf_expert_reference")
+  /// Salesforce Listing/Opportunity object ID — sync key
+  salesforceId      String? @unique @map("salesforce_id")
+  qualityScore      Decimal? @map("quality_score") @db.Decimal(5, 2)
+
+  soldAt                  DateTime? @map("sold_at")
+  daysOnMarket            Int?      @map("days_on_market")
+  pricePerSqft            Decimal?  @map("price_per_sqft") @db.Decimal(10, 2)
+  marketDifferencePercent Decimal?  @map("market_difference_percent") @db.Decimal(6, 2)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  agent    Agent    @relation(fields: [agentId], references: [id], onDelete: Restrict)
+
+  deals              Deal[]
+  offers             Offer[]
+  viewings           Viewing[]
+  priceHistory       PriceHistory[]
+  leases             Lease[]
+  subjectComparables ComparableProperty[] @relation("SubjectListingComparables")
+  compComparables    ComparableProperty[] @relation("CompListingComparables")
+
+  @@index([propertyId])
+  @@index([propertyId, status])
+  @@index([status])
+  @@index([status, askingPrice])
+  @@index([listingType, status, askingPrice])
+  @@index([askingPrice])
+  @@index([agentId, status])
+  @@index([publishedAt(sort: Desc)])
+  @@index([expiresAt])
+  @@index([pfExpertReference])
+  @@index([salesforceId])
+  @@index([deletedAt])
+  @@map("listings")
+}
+
+// ─── External parties ────────────────────────────────────────────────────────
+
+model Owner {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  phone        String?
+  fullName     String   @map("full_name")
+  salesforceId String?  @unique @map("salesforce_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  properties Property[]
+
+  @@index([email])
+  @@index([salesforceId])
+  @@map("owners")
+}
+
+model Buyer {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  phone        String?
+  fullName     String   @map("full_name")
+  salesforceId String?  @unique @map("salesforce_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  deals    Deal[]
+  offers   Offer[]
+  viewings Viewing[]
+
+  @@index([email])
+  @@index([salesforceId])
+  @@map("buyers")
+}
+
+model Tenant {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  phone        String?
+  fullName     String   @map("full_name")
+  salesforceId String?  @unique @map("salesforce_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  leases   Lease[]
+  viewings Viewing[]
+
+  @@index([email])
+  @@index([salesforceId])
+  @@map("tenants")
+}
+
+// ─── CRM & workflow (property-scoped) ────────────────────────────────────────
+
+model Deal {
+  id          String     @id @default(uuid()) @db.Uuid
+  propertyId  String     @map("property_id") @db.Uuid
+  listingId   String     @map("listing_id") @db.Uuid
+  buyerId     String     @map("buyer_id") @db.Uuid
+  agentId     String     @map("agent_id") @db.Uuid
+  status      DealStatus @default(INQUIRY)
+  offerPrice  Decimal?   @map("offer_price") @db.Decimal(12, 2)
+  agreedPrice Decimal?   @map("agreed_price") @db.Decimal(12, 2)
+  currency    String     @default("AED") @db.Char(3)
+  salesforceId String?   @unique @map("salesforce_id")
+  openedAt    DateTime   @default(now()) @map("opened_at")
+  closedAt    DateTime?  @map("closed_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  listing  Listing  @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  buyer    Buyer    @relation(fields: [buyerId], references: [id], onDelete: Restrict)
+  agent    Agent    @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  offer    Offer?
+
+  @@index([propertyId, status])
+  @@index([listingId])
+  @@index([buyerId, status])
+  @@index([salesforceId])
+  @@map("deals")
+}
+
+model Offer {
+  id          String      @id @default(uuid()) @db.Uuid
+  propertyId  String      @map("property_id") @db.Uuid
+  listingId   String      @map("listing_id") @db.Uuid
+  buyerId     String      @map("buyer_id") @db.Uuid
+  agentId     String      @map("agent_id") @db.Uuid
+  dealId      String?     @unique @map("deal_id") @db.Uuid
+  status      OfferStatus @default(PENDING)
+  offerPrice  Decimal     @map("offer_price") @db.Decimal(12, 2)
+  currency    String      @default("AED") @db.Char(3)
+  expiresAt   DateTime?   @map("expires_at")
+  submittedAt DateTime    @default(now()) @map("submitted_at")
+  respondedAt DateTime?   @map("responded_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  listing  Listing  @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  buyer    Buyer    @relation(fields: [buyerId], references: [id], onDelete: Restrict)
+  agent    Agent    @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  deal     Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, status])
+  @@index([listingId])
+  @@map("offers")
+}
+
+model Viewing {
+  id              String        @id @default(uuid()) @db.Uuid
+  propertyId      String        @map("property_id") @db.Uuid
+  listingId       String        @map("listing_id") @db.Uuid
+  agentId         String        @map("agent_id") @db.Uuid
+  buyerId         String?       @map("buyer_id") @db.Uuid
+  tenantId        String?       @map("tenant_id") @db.Uuid
+  scheduledAt     DateTime      @map("scheduled_at")
+  durationMinutes Int           @default(60) @map("duration_minutes")
+  status          ViewingStatus @default(SCHEDULED)
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  listing  Listing  @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  agent    Agent    @relation(fields: [agentId], references: [id], onDelete: Restrict)
+  buyer    Buyer?   @relation(fields: [buyerId], references: [id], onDelete: SetNull)
+  tenant   Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, scheduledAt])
+  @@index([listingId])
+  @@map("viewings")
+}
+
+model Lease {
+  id         String      @id @default(uuid()) @db.Uuid
+  propertyId String      @map("property_id") @db.Uuid
+  tenantId   String      @map("tenant_id") @db.Uuid
+  listingId  String?     @map("listing_id") @db.Uuid
+  status     LeaseStatus @default(ACTIVE)
+  annualRent Decimal     @map("annual_rent") @db.Decimal(12, 2)
+  currency   String      @default("AED") @db.Char(3)
+  startDate  DateTime    @map("start_date") @db.Date
+  endDate    DateTime?   @map("end_date") @db.Date
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  listing  Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, status])
+  @@index([tenantId, status])
+  @@map("leases")
+}
+
+model PriceHistory {
+  id         String   @id @default(uuid()) @db.Uuid
+  propertyId String   @map("property_id") @db.Uuid
+  listingId  String?  @map("listing_id") @db.Uuid
+  price      Decimal  @db.Decimal(12, 2)
+  currency   String   @default("AED") @db.Char(3)
+  source     String   @default("manual")
+  recordedAt DateTime @map("recorded_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  listing  Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, recordedAt(sort: Desc)])
+  @@index([listingId, recordedAt(sort: Desc)])
+  @@map("price_history")
+}
+
+// ─── Media (property-scoped metadata) ────────────────────────────────────────
+
+model Document {
+  id               String   @id @default(uuid()) @db.Uuid
+  propertyId       String   @map("property_id") @db.Uuid
+  documentType     String   @map("document_type")
+  title            String
+  url              String
+  mimeType         String?  @map("mime_type")
+  uploadedByUserId String?  @map("uploaded_by_user_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  uploadedBy User?    @relation("DocumentUploader", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, documentType])
+  @@map("documents")
+}
+
+model Photo {
+  id           String   @id @default(uuid()) @db.Uuid
+  propertyId   String   @map("property_id") @db.Uuid
+  url          String
+  thumbnailUrl String?  @map("thumbnail_url")
+  caption      String?
+  sortOrder    Int      @default(0) @map("sort_order")
+  width        Int?
+  height       Int?
+  mimeType     String?  @map("mime_type")
+  isPrimary    Boolean  @default(false) @map("is_primary")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, sortOrder])
+  @@map("photos")
+}
+
+model PropertyImage {
+  id           String   @id @default(uuid()) @db.Uuid
+  propertyId   String   @map("property_id") @db.Uuid
+  imageUrl     String   @map("image_url")
+  storagePath  String   @map("storage_path")
+  displayOrder Int      @default(0) @map("display_order")
+  isCover      Boolean  @default(false) @map("is_cover")
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, displayOrder])
+  @@index([propertyId, isCover])
+  @@map("property_images")
+}
+
+model Video {
+  id              String   @id @default(uuid()) @db.Uuid
+  propertyId      String   @map("property_id") @db.Uuid
+  url             String
+  posterUrl       String?  @map("poster_url")
+  caption         String?
+  durationSeconds Int?     @map("duration_seconds")
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, sortOrder])
+  @@map("videos")
+}
+
+model FloorPlan {
+  id         String   @id @default(uuid()) @db.Uuid
+  propertyId String   @map("property_id") @db.Uuid
+  url        String
+  title      String?
+  pageCount  Int?     @map("page_count")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, sortOrder])
+  @@map("floor_plans")
+}
+
+model PropertyNote {
+  id           String   @id @default(uuid()) @db.Uuid
+  propertyId   String   @map("property_id") @db.Uuid
+  authorUserId String   @map("author_user_id") @db.Uuid
+  body         String
+  isPinned     Boolean  @default(false) @map("is_pinned")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  author   User     @relation("NoteAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@index([propertyId, createdAt(sort: Desc)])
+  @@map("property_notes")
+}
+
+model Task {
+  id                String       @id @default(uuid()) @db.Uuid
+  propertyId        String?      @map("property_id") @db.Uuid
+  title             String
+  description       String?
+  assigneeUserId    String?      @map("assignee_user_id") @db.Uuid
+  assigneeAgentId   String?      @map("assignee_agent_id") @db.Uuid
+  relatedEntityType String?      @map("related_entity_type")
+  relatedEntityId   String?      @map("related_entity_id") @db.Uuid
+  dueAt             DateTime?    @map("due_at")
+  completedAt       DateTime?    @map("completed_at")
+  priority          TaskPriority @default(MEDIUM)
+  status            TaskStatus   @default(PENDING)
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  property      Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  assigneeUser  User?     @relation("TaskAssigneeUser", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  assigneeAgent Agent?    @relation("TaskAssigneeAgent", fields: [assigneeAgentId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId, status])
+  @@map("tasks")
+}
+
+model MarketStatistics {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  scopeType           MarketStatisticsScope  @map("scope_type")
+  scopeId             String                 @map("scope_id") @db.Uuid
+  propertyId          String?                @map("property_id") @db.Uuid
+  period              MarketStatisticsPeriod
+  periodStart         DateTime               @map("period_start") @db.Date
+  avgAskingPrice      Decimal?               @map("avg_asking_price") @db.Decimal(12, 2)
+  avgPricePerSqft     Decimal?               @map("avg_price_per_sqft") @db.Decimal(10, 2)
+  avgRent             Decimal?               @map("avg_rent") @db.Decimal(12, 2)
+  avgRoi              Decimal?               @map("avg_roi") @db.Decimal(5, 2)
+  avgDaysOnMarket     Int?                   @map("avg_days_on_market")
+  medianPrice         Decimal?               @map("median_price") @db.Decimal(12, 2)
+  lowestPrice         Decimal?               @map("lowest_price") @db.Decimal(12, 2)
+  highestPrice        Decimal?               @map("highest_price") @db.Decimal(12, 2)
+  supplyLevel         String?                @map("supply_level")
+  demandLevel         String?                @map("demand_level")
+  marketConfidence    Decimal?               @map("market_confidence") @db.Decimal(5, 2)
+  activeListingsCount Int                    @default(0) @map("active_listings_count")
+  sampleSize          Int                    @default(0) @map("sample_size")
+  computedAt          DateTime               @map("computed_at")
+  createdAt           DateTime               @default(now()) @map("created_at")
+
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@unique([scopeType, scopeId, period, periodStart])
+  @@index([propertyId, periodStart(sort: Desc)])
+  @@map("market_statistics")
+}
+
+model ComparableProperty {
+  id                 String   @id @default(uuid()) @db.Uuid
+  subjectPropertyId  String   @map("subject_property_id") @db.Uuid
+  subjectListingId   String?  @map("subject_listing_id") @db.Uuid
+  compPropertyId     String   @map("comp_property_id") @db.Uuid
+  compListingId      String?  @map("comp_listing_id") @db.Uuid
+  similarityScore    Decimal  @map("similarity_score") @db.Decimal(5, 2)
+  priceDifferencePct Decimal? @map("price_difference_pct") @db.Decimal(6, 2)
+  distanceMeters     Int?     @map("distance_meters")
+  matchedOn          String[] @map("matched_on")
+  computedAt         DateTime @map("computed_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  subjectProperty Property  @relation("SubjectComparables", fields: [subjectPropertyId], references: [id], onDelete: Cascade)
+  compProperty    Property  @relation("CompComparables", fields: [compPropertyId], references: [id], onDelete: Cascade)
+  subjectListing  Listing?  @relation("SubjectListingComparables", fields: [subjectListingId], references: [id], onDelete: SetNull)
+  compListing     Listing?  @relation("CompListingComparables", fields: [compListingId], references: [id], onDelete: SetNull)
+
+  @@index([subjectPropertyId, similarityScore(sort: Desc)])
+  @@map("comparable_properties")
+}
+
+// ─── Community market intelligence (LARSSH research database) ────────────────
+
+model CommunityMarketIntelligence {
+  id          String @id @default(uuid()) @db.Uuid
+  communitySlug String @map("community_slug")
+  communityName String @map("community_name")
+  /// 0 = studio, 1 = one bedroom, etc.
+  bedroomCount  Int    @map("bedroom_count")
+
+  rentFurnishedMin       Decimal? @map("rent_furnished_min") @db.Decimal(12, 2)
+  rentFurnishedAvg       Decimal? @map("rent_furnished_avg") @db.Decimal(12, 2)
+  rentFurnishedMax       Decimal? @map("rent_furnished_max") @db.Decimal(12, 2)
+  rentFurnishedEstimated Boolean  @default(false) @map("rent_furnished_estimated")
+
+  rentUnfurnishedMin       Decimal? @map("rent_unfurnished_min") @db.Decimal(12, 2)
+  rentUnfurnishedAvg       Decimal? @map("rent_unfurnished_avg") @db.Decimal(12, 2)
+  rentUnfurnishedMax       Decimal? @map("rent_unfurnished_max") @db.Decimal(12, 2)
+  rentUnfurnishedEstimated Boolean @default(false) @map("rent_unfurnished_estimated")
+
+  saleAskingLowest    Decimal? @map("sale_asking_lowest") @db.Decimal(12, 2)
+  saleAskingAvg       Decimal? @map("sale_asking_avg") @db.Decimal(12, 2)
+  saleAskingHighest   Decimal? @map("sale_asking_highest") @db.Decimal(12, 2)
+  saleAskingEstimated Boolean  @default(false) @map("sale_asking_estimated")
+
+  saleSoldLowest    Decimal? @map("sale_sold_lowest") @db.Decimal(12, 2)
+  saleSoldAvg       Decimal? @map("sale_sold_avg") @db.Decimal(12, 2)
+  saleSoldHighest   Decimal? @map("sale_sold_highest") @db.Decimal(12, 2)
+  saleSoldEstimated Boolean  @default(false) @map("sale_sold_estimated")
+
+  averageSizeSqft     Decimal?            @map("average_size_sqft") @db.Decimal(10, 2)
+  averagePricePerSqft Decimal?            @map("average_price_per_sqft") @db.Decimal(10, 2)
+  estimatedRoiPercent Decimal?            @map("estimated_roi_percent") @db.Decimal(5, 2)
+  demand              MarketDemandLevel?
+  confidencePercent   Decimal?            @map("confidence_percent") @db.Decimal(5, 2)
+
+  /// True when the profile was derived from nearby-community estimates.
+  isEstimated Boolean @default(false) @map("is_estimated")
+  notes       String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([communitySlug, bedroomCount])
+  @@index([communitySlug])
+  @@map("community_market_intelligence")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+enum UserRole {
+  AGENT
+  MANAGER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  INVITED
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum PropertyType {
+  APARTMENT
+  VILLA
+  TOWNHOUSE
+  DUPLEX
+  PENTHOUSE
+  OFFICE
+  RETAIL
+  WAREHOUSE
+  LAND
+  OTHER
+}
+
+enum PropertyStatus {
+  VACANT
+  OCCUPIED
+  UNDER_RENOVATION
+  OFF_MARKET
+}
+
+enum Furnishing {
+  UNFURNISHED
+  PARTIALLY_FURNISHED
+  FULLY_FURNISHED
+}
+
+enum ViewType {
+  SEA
+  CITY
+  GARDEN
+  POOL
+  STREET
+  COURTYARD
+  PARK
+  OTHER
+}
+
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  PENDING
+  SOLD
+  RENTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum DealStatus {
+  INQUIRY
+  VIEWING
+  OFFER
+  NEGOTIATION
+  UNDER_CONTRACT
+  CLOSED
+  CANCELLED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+  COUNTERED
+}
+
+enum ViewingStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum LeaseStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum MarketStatisticsScope {
+  MASTER_COMMUNITY
+  COMMUNITY
+  BUILDING
+  PROPERTY
+  PROPERTY_TYPE
+  REGION
+}
+
+enum MarketStatisticsPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum MarketDemandLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
