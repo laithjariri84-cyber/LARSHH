@@ -1,6 +1,7 @@
 import { ListingStatus, ListingType, type Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { rscTry } from "@/lib/rsc-debug";
 
 import type { DashboardQueryScope } from "./dashboard.types";
 
@@ -95,6 +96,7 @@ function propertyWithListingCreatedInMonthWhere(
 export async function fetchDashboardMetrics(
   scope: DashboardQueryScope
 ): Promise<DashboardMetrics> {
+  return rscTry("dashboard.repository:fetchDashboardMetrics", async () => {
   const activeListings = await prisma.property.count({
     where: propertyWithListingWhere(scope, { status: ListingStatus.ACTIVE }),
   });
@@ -177,4 +179,5 @@ export async function fetchDashboardMetrics(
     currentMonthCommunities: currentMonthCommunityRows.length,
     previousMonthCommunities: previousMonthCommunityRows.length,
   };
+  });
 }

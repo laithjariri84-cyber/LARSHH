@@ -14,5 +14,6 @@ export type {
 export {
   searchFiltersSchema,
   searchFiltersDefaults,
+  parseSearchFilters,
 } from "./schemas/search-filters.schema";
 export type { SearchFiltersInput } from "./schemas/search-filters.schema";

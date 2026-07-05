@@ -116,7 +116,7 @@ function mapSimilarProperty(
 
   return {
     propertyId: property.id,
-    community: property.community?.name ?? property.building.community.name,
+    community: property.community?.name ?? property.building?.community?.name ?? "Unknown",
     building: property.building.name,
     unitNumber: property.unitNumber,
     propertyType: property.propertyType,
@@ -152,7 +152,7 @@ export function mapPropertyToDetailsViewModel(
     propertyCode: property.propertyCode,
     pfExpertReference: primaryListing?.pfExpertReference ?? null,
     masterCommunity: property.masterCommunity?.name ?? null,
-    community: property.community?.name ?? property.building.community.name,
+    community: property.community?.name ?? property.building?.community?.name ?? "Unknown",
     building: property.building.name,
     unitNumber: property.unitNumber,
     propertyType: property.propertyType,
@@ -204,7 +204,7 @@ export function mapPropertyToDetailsViewModel(
       id: note.id,
       body: note.body,
       isPinned: note.isPinned,
-      authorName: note.author.fullName ?? "LARSSH Team",
+      authorName: note.author?.fullName ?? "LARSSH Team",
       createdAt: note.createdAt,
     })),
   };

@@ -47,3 +47,11 @@ export const searchFiltersSchema = z.object({
 export type SearchFiltersInput = z.infer<typeof searchFiltersSchema>;
 
 export const searchFiltersDefaults: SearchFiltersInput = {};
+
+/** Safe parser for URL search params — never throws on malformed input. */
+export function parseSearchFilters(
+  raw: Record<string, string | undefined>
+): SearchFiltersInput {
+  const result = searchFiltersSchema.safeParse(raw);
+  return result.success ? result.data : searchFiltersDefaults;
+}

@@ -3,6 +3,7 @@ import {
   resolveCommunitySlug,
 } from "@/server/market-intelligence/community-matcher";
 import { listMarketProfiles } from "@/server/market-intelligence/market-intelligence.repository";
+import { rscTry } from "@/lib/rsc-debug";
 
 import type { PropertySearchResult } from "../types";
 
@@ -11,26 +12,28 @@ export async function enrichSearchResultsWithMarketIntelligence(
 ): Promise<PropertySearchResult[]> {
   if (results.length === 0) return results;
 
-  const profiles = await listMarketProfiles();
-  const profileByKey = new Map(
-    profiles.map((profile) => [
-      `${profile.communitySlug}:${profile.bedroomCount}`,
-      profile,
-    ])
-  );
+  return rscTry("enrich-search-intelligence:enrich", async () => {
+    const profiles = await listMarketProfiles();
+    const profileByKey = new Map(
+      profiles.map((profile) => [
+        `${profile.communitySlug}:${profile.bedroomCount}`,
+        profile,
+      ])
+    );
 
-  return results.map((result) => {
-    const slug = resolveCommunitySlug(result.community);
-    if (!slug) {
-      return result;
-    }
+    return results.map((result) => {
+      const slug = resolveCommunitySlug(result.community);
+      if (!slug) {
+        return result;
+      }
 
-    const bedroomCount = normalizeBedroomCount(result.bedrooms);
-    const profile = profileByKey.get(`${slug}:${bedroomCount}`);
+      const bedroomCount = normalizeBedroomCount(result.bedrooms);
+      const profile = profileByKey.get(`${slug}:${bedroomCount}`);
 
-    return {
-      ...result,
-      estimatedRoiPercent: profile?.estimatedRoiPercent ?? null,
-    };
+      return {
+        ...result,
+        estimatedRoiPercent: profile?.estimatedRoiPercent ?? null,
+      };
+    });
   });
 }

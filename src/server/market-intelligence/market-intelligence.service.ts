@@ -1,12 +1,13 @@
 import type { Furnishing, ListingType } from "@prisma/client";
 
+import { rscTry } from "@/lib/rsc-debug";
+
 import {
   bedroomLabel,
   normalizeBedroomCount,
   resolveCommunitySlug,
 } from "./community-matcher";
-import { findMarketProfile } from "./market-intelligence.repository";
-import type {
+import { findMarketProfile } from "./market-intelligence.repository";import type {
   MarketRecommendation,
   PropertyMarketIntelligence,
   RecommendationTone,
@@ -114,9 +115,9 @@ function formatDifferenceLabel(differencePercent: number | null): string | null 
 export async function computePropertyMarketIntelligence(
   input: ComputeInput
 ): Promise<PropertyMarketIntelligence | null> {
+  return rscTry("market-intelligence.service:computePropertyMarketIntelligence", async () => {
   const communitySlug = resolveCommunitySlug(input.communityName);
   if (!communitySlug) return null;
-
   const bedroomCount = normalizeBedroomCount(input.bedrooms);
   const profile = await findMarketProfile(communitySlug, bedroomCount);
   if (!profile) return null;
@@ -170,4 +171,5 @@ export async function computePropertyMarketIntelligence(
     furnishing: input.furnishing,
     profileNotes: profile.notes,
   };
+  });
 }

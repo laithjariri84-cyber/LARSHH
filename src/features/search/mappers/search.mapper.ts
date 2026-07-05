@@ -49,7 +49,7 @@ export function mapPropertyToSearchResult(
   return {
     propertyId: property.id,
     propertyCode: property.propertyCode,
-    community: property.community?.name ?? property.building.community.name,
+    community: property.community?.name ?? property.building?.community?.name ?? "Unknown",
     building: property.building.name,
     unitNumber: property.unitNumber,
     bedrooms: property.bedrooms,

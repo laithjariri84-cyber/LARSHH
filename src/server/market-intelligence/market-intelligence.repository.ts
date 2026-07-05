@@ -50,24 +50,34 @@ export async function findMarketProfile(
   communitySlug: string,
   bedroomCount: number
 ): Promise<CommunityMarketProfileRecord | null> {
-  const row = await prisma.communityMarketIntelligence.findUnique({
-    where: {
-      communitySlug_bedroomCount: {
-        communitySlug,
-        bedroomCount,
+  try {
+    const row = await prisma.communityMarketIntelligence.findUnique({
+      where: {
+        communitySlug_bedroomCount: {
+          communitySlug,
+          bedroomCount,
+        },
       },
-    },
-  });
+    });
 
-  return row ? mapProfile(row) : null;
+    return row ? mapProfile(row) : null;
+  } catch (error) {
+    console.error("[RSC ERROR] scope=market-intelligence.repository:findMarketProfile", error);
+    return null;
+  }
 }
 
 export async function listMarketProfiles(): Promise<CommunityMarketProfileRecord[]> {
-  const rows = await prisma.communityMarketIntelligence.findMany({
-    orderBy: [{ communityName: "asc" }, { bedroomCount: "asc" }],
-  });
+  try {
+    const rows = await prisma.communityMarketIntelligence.findMany({
+      orderBy: [{ communityName: "asc" }, { bedroomCount: "asc" }],
+    });
 
-  return rows.map(mapProfile);
+    return rows.map(mapProfile);
+  } catch (error) {
+    console.error("[RSC ERROR] scope=market-intelligence.repository:listMarketProfiles", error);
+    return [];
+  }
 }
 
 export async function updateMarketProfile(

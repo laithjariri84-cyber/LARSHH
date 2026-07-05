@@ -1,5 +1,6 @@
 import { getUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { rscTry } from "@/lib/rsc-debug";
 import { isUiOnlyMode } from "@/lib/ui-only";
 
 import { fetchDashboardMetrics } from "./dashboard.repository";
@@ -32,72 +33,76 @@ function formatGrowthPercent(
 }
 
 async function resolveDashboardScope(): Promise<DashboardQueryScope> {
-  if (isUiOnlyMode()) {
-    return {};
-  }
+  return rscTry("dashboard.service:resolveDashboardScope", async () => {
+    if (isUiOnlyMode()) {
+      return {};
+    }
 
-  const user = await getUser();
-  if (!user) {
-    return {};
-  }
+    const user = await getUser();
+    if (!user) {
+      return {};
+    }
 
-  const agent = await prisma.agent.findUnique({
-    where: { userId: user.id },
-    select: { id: true },
+    const agent = await prisma.agent.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+
+    if (!agent) {
+      return {};
+    }
+
+    return { agentId: agent.id };
   });
-
-  if (!agent) {
-    return {};
-  }
-
-  return { agentId: agent.id };
 }
 
 export async function getDashboardStatistics(): Promise<DashboardStat[]> {
-  const scope = await resolveDashboardScope();
-  const metrics = await fetchDashboardMetrics(scope);
+  return rscTry("dashboard.service:getDashboardStatistics", async () => {
+    const scope = await resolveDashboardScope();
+    const metrics = await fetchDashboardMetrics(scope);
 
-  const activeGrowth = formatGrowthPercent(
-    metrics.currentMonthListings,
-    metrics.previousMonthListings
-  );
-  const rentalGrowth = formatGrowthPercent(
-    metrics.currentMonthRentals,
-    metrics.previousMonthRentals
-  );
-  const salesGrowth = formatGrowthPercent(
-    metrics.currentMonthSales,
-    metrics.previousMonthSales
-  );
-  const communityGrowth = formatGrowthPercent(
-    metrics.currentMonthCommunities,
-    metrics.previousMonthCommunities
-  );
+    const activeGrowth = formatGrowthPercent(
+      metrics.currentMonthListings,
+      metrics.previousMonthListings
+    );
+    const rentalGrowth = formatGrowthPercent(
+      metrics.currentMonthRentals,
+      metrics.previousMonthRentals
+    );
+    const salesGrowth = formatGrowthPercent(
+      metrics.currentMonthSales,
+      metrics.previousMonthSales
+    );
+    const communityGrowth = formatGrowthPercent(
+      metrics.currentMonthCommunities,
+      metrics.previousMonthCommunities
+    );
 
-  return [
-    {
-      label: "Active Listings",
-      value: String(metrics.activeListings),
-      change: activeGrowth.change,
-      trend: activeGrowth.trend,
-    },
-    {
-      label: "Rentals",
-      value: String(metrics.rentals),
-      change: rentalGrowth.change,
-      trend: rentalGrowth.trend,
-    },
-    {
-      label: "Sales",
-      value: String(metrics.sales),
-      change: salesGrowth.change,
-      trend: salesGrowth.trend,
-    },
-    {
-      label: "Communities",
-      value: String(metrics.communities),
-      change: communityGrowth.change,
-      trend: communityGrowth.trend,
-    },
-  ];
+    return [
+      {
+        label: "Active Listings",
+        value: String(metrics.activeListings),
+        change: activeGrowth.change,
+        trend: activeGrowth.trend,
+      },
+      {
+        label: "Rentals",
+        value: String(metrics.rentals),
+        change: rentalGrowth.change,
+        trend: rentalGrowth.trend,
+      },
+      {
+        label: "Sales",
+        value: String(metrics.sales),
+        change: salesGrowth.change,
+        trend: salesGrowth.trend,
+      },
+      {
+        label: "Communities",
+        value: String(metrics.communities),
+        change: communityGrowth.change,
+        trend: communityGrowth.trend,
+      },
+    ];
+  });
 }

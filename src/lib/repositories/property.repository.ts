@@ -4,6 +4,7 @@ import { ListingStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 import type { SearchFiltersInput } from "@/features/search/schemas/search-filters.schema";
+import { rscTry } from "@/lib/rsc-debug";
 
 const listingAgentInclude = {
   agent: { include: { user: true } },
@@ -229,6 +230,7 @@ export async function getBuildingOptions(communityId?: string) {
 }
 
 export async function fetchSearchPageData(filters: SearchFiltersInput = {}) {
+  return rscTry("property.repository:fetchSearchPageData", async () => {
   const where = buildSearchWhere(filters);
 
   const [properties, communities, buildings] = await prisma.$transaction([
@@ -249,6 +251,7 @@ export async function fetchSearchPageData(filters: SearchFiltersInput = {}) {
   ]);
 
   return { properties, communities, buildings };
+  });
 }
 
 export function getAgentDisplayName(

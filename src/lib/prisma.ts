@@ -30,7 +30,13 @@ function resolveDatabaseUrl(): string {
 
 function resolveDirectUrl(): string | undefined {
   const direct = process.env.DIRECT_URL?.trim();
-  return direct ? withConnectionLimit(direct) : undefined;
+  if (direct) {
+    return withConnectionLimit(direct);
+  }
+
+  // Vercel deployments sometimes omit DIRECT_URL; fall back for runtime queries.
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  return databaseUrl ? withConnectionLimit(databaseUrl) : undefined;
 }
 
 function createPrismaClient(databaseUrl: string): PrismaClient {
@@ -59,17 +65,11 @@ export function getDirectPrisma(): PrismaClient {
 
   const directUrl = resolveDirectUrl() ?? resolveDatabaseUrl();
   const client = createPrismaClient(directUrl);
-
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.directPrisma = client;
-  }
-
+  globalForPrisma.directPrisma = client;
   return client;
 }
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+globalForPrisma.prisma = prisma;
 
 export function getDatabaseUrl(): string {
   return resolveDatabaseUrl();

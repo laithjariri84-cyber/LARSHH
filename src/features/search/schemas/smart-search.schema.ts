@@ -32,6 +32,8 @@ export const smartSearchMetaSchema = z.object({
 
 export type SmartSearchMeta = z.infer<typeof smartSearchMetaSchema>;
 
+const smartSearchMetaDefaults: SmartSearchMeta = {};
+
 export function parseSmartSearchMeta(
   params: Record<string, string | string[] | undefined>
 ) {
@@ -40,11 +42,13 @@ export function parseSmartSearchMeta(
     return Array.isArray(value) ? value[0] : value;
   };
 
-  return smartSearchMetaSchema.parse({
+  const result = smartSearchMetaSchema.safeParse({
     sort: pick("sort"),
     smartQuery: pick("smartQuery"),
     detected: pick("detected"),
   });
+
+  return result.success ? result.data : smartSearchMetaDefaults;
 }
 
 export function parseDetectedKeys(detected?: string): string[] {

@@ -2,70 +2,52 @@ import type { Metadata } from "next";
 
 import { notFound } from "next/navigation";
 
-
-
 import { PropertyDetailsView } from "@/features/properties/components/property-details-view";
-
 import { getPropertyDetailsById } from "@/features/properties/services/property-details";
-
-
+import { logRscError, rscTry } from "@/lib/rsc-debug";
 
 export async function generateMetadata({
-
   params,
-
 }: {
-
   params: Promise<{ id: string }>;
-
 }): Promise<Metadata> {
+  try {
+    const { id } = await params;
+    const property = await rscTry(
+      "properties/[id]/generateMetadata:getPropertyDetailsById",
+      () => getPropertyDetailsById(id)
+    );
 
-  const { id } = await params;
+    if (!property) return { title: "Property Not Found" };
 
-  const property = await getPropertyDetailsById(id);
+    const title = property.unitNumber
+      ? `Unit ${property.unitNumber} · ${property.building}`
+      : property.building;
 
-  if (!property) return { title: "Property Not Found" };
-
-
-
-  const title = property.unitNumber
-
-    ? `Unit ${property.unitNumber} · ${property.building}`
-
-    : property.building;
-
-
-
-  return { title };
-
+    return { title };
+  } catch (error) {
+    logRscError("properties/[id]/generateMetadata", error);
+  }
 }
-
-
 
 type PropertyDetailsPageProps = {
-
   params: Promise<{ id: string }>;
-
 };
 
-
-
 export default async function PropertyDetailsPage({
-
   params,
-
 }: PropertyDetailsPageProps) {
+  try {
+    const { id } = await params;
+    const property = await rscTry(
+      "properties/[id]/page:getPropertyDetailsById",
+      () => getPropertyDetailsById(id)
+    );
 
-  const { id } = await params;
+    if (!property) notFound();
 
-  const property = await getPropertyDetailsById(id);
-
-  if (!property) notFound();
-
-
-
-  return <PropertyDetailsView property={property} />;
-
+    return <PropertyDetailsView property={property} />;
+  } catch (error) {
+    logRscError("properties/[id]/page:render", error);
+  }
 }
-
-
