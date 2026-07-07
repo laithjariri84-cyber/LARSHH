@@ -1,0 +1,350 @@
+﻿node.exe : npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm 
+help npmrc` for supported config options.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...config options.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+> larssh@0.1.0 build
+> next build
+
+   Ôû▓ Next.js 15.5.19
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ Ô£ô Compiled successfully in 4.9s
+   Linting and checking validity of types ...
+
+./src/hooks/use-live-clock.ts
+28:6  Warning: React Hook useEffect has a missing dependency: 'formatOptions'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/lib/database/repositories/prisma-catalog.repositories.ts
+12:3  Warning: 'CreateAgentInput' is defined but never used.  @typescript-eslint/no-unused-vars
+13:3  Warning: 'CreateBuildingInput' is defined but never used.  @typescript-eslint/no-unused-vars
+14:3  Warning: 'CreateBuyerInput' is defined but never used.  @typescript-eslint/no-unused-vars
+15:3  Warning: 'CreateCommunityInput' is defined but never used.  @typescript-eslint/no-unused-vars
+16:3  Warning: 'CreateOwnerInput' is defined but never used.  @typescript-eslint/no-unused-vars
+17:3  Warning: 'CreateTenantInput' is defined but never used.  @typescript-eslint/no-unused-vars
+18:3  Warning: 'UpdateAgentInput' is defined but never used.  @typescript-eslint/no-unused-vars
+19:3  Warning: 'UpdateBuildingInput' is defined but never used.  @typescript-eslint/no-unused-vars
+20:3  Warning: 'UpdateBuyerInput' is defined but never used.  @typescript-eslint/no-unused-vars
+21:3  Warning: 'UpdateCommunityInput' is defined but never used.  @typescript-eslint/no-unused-vars
+22:3  Warning: 'UpdateOwnerInput' is defined but never used.  @typescript-eslint/no-unused-vars
+23:3  Warning: 'UpdateTenantInput' is defined but never used.  @typescript-eslint/no-unused-vars
+26:3  Warning: 'AgentFilterParams' is defined but never used.  @typescript-eslint/no-unused-vars
+27:3  Warning: 'AgentSearchParams' is defined but never used.  @typescript-eslint/no-unused-vars
+28:3  Warning: 'BuildingFilterParams' is defined but never used.  @typescript-eslint/no-unused-vars
+29:3  Warning: 'BuildingSearchParams' is defined but never used.  @typescript-eslint/no-unused-vars
+30:3  Warning: 'BuyerFilterParams' is defined but never used.  @typescript-eslint/no-unused-vars
+31:3  Warning: 'BuyerSearchParams' is defined but never used.  @typescript-eslint/no-unused-vars
+32:3  Warning: 'CommunityFilterParams' is defined but never used.  @typescript-eslint/no-unused-vars
+33:3  Warning: 'CommunitySearchParams' is defined but never used.  @typescript-eslint/no-unused-vars
+34:3  Warning: 'OwnerFilterParams' is defined but never used.  @typescript-eslint/no-unused-vars
+35:3  Warning: 'OwnerSearchParams' is defined but never used.  @typescript-eslint/no-unused-vars
+36:3  Warning: 'TenantFilterParams' is defined but never used.  @typescript-eslint/no-unused-vars
+37:3  Warning: 'TenantSearchParams' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/database/repositories/prisma-entity.repositories.ts
+7:15  Warning: 'DealFilterParams' is defined but never used.  @typescript-eslint/no-unused-vars
+10:15  Warning: 'Deal' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/database/repositories/prisma-property-aggregate.repository.ts
+473:17  Warning: '_propertyId' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/import/sources/pf-expert/pf-expert.parser.ts
+17:29  Warning: '_fileName' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/repositories/property.repository.ts
+196:13  Warning: '_areaSqft' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/lib/services/property-domain.service.impl.ts
+3:3  Warning: 'PropertyAggregate' is defined but never used.  @typescript-eslint/no-unused-vars
+7:3  Warning: 'PropertySummary' is defined but never used.  @typescript-eslint/no-unused-vars
+11:3  Warning: 'PaginatedResult' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/services/buyer.service.ts
+6:3  Warning: 'ServiceResult' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/42) ...
+   Generating static pages (10/42) 
+   Generating static pages (20/42) 
+prisma:error 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Authentication failed against database server, the provided database credentials for `postgres` are not valid.
+
+Please make sure to provide valid database credentials for the database server at the configured address.
+prisma:error 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Authentication failed against database server, the provided database credentials for `postgres` are not valid.
+
+Please make sure to provide valid database credentials for the database server at the configured address.
+prisma:error 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Authentication failed against database server, the provided database credentials for `postgres` are not valid.
+
+Please make sure to provide valid database credentials for the database server at the configured address.
+prisma:error 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Authentication failed against database server, the provided database credentials for `postgres` are not valid.
+
+Please make sure to provide valid database credentials for the database server at the configured address.
+[RSC ERROR] scope=market-intelligence.repository:listMarketProfilesByCommunitySlug Error 
+[PrismaClientInitializationError]: 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Authentication failed against database server, the provided database credentials for `postgres` are not valid.
+
+Please make sure to provide valid database credentials for the database server at the configured address.
+    at async k (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:8795)
+    at async (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:1684)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async p (C:\Users\admin\agent 
+os\.next\server\app\(dashboard)\communities\[masterSlug]\[projectSlug]\page.js:1:25683) {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[RSC ERROR] scope=market-intelligence.repository:listMarketProfilesByCommunitySlug Error 
+[PrismaClientInitializationError]: 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Authentication failed against database server, the provided database credentials for `postgres` are not valid.
+
+Please make sure to provide valid database credentials for the database server at the configured address.
+    at async k (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:8795)
+    at async (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:1684)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async p (C:\Users\admin\agent 
+os\.next\server\app\(dashboard)\communities\[masterSlug]\[projectSlug]\page.js:1:25683) {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[RSC ERROR] scope=market-intelligence.repository:listMarketProfilesByCommunitySlug Error 
+[PrismaClientInitializationError]: 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Authentication failed against database server, the provided database credentials for `postgres` are not valid.
+
+Please make sure to provide valid database credentials for the database server at the configured address.
+    at async k (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:8795)
+    at async (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:1684)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async p (C:\Users\admin\agent 
+os\.next\server\app\(dashboard)\communities\[masterSlug]\[projectSlug]\page.js:1:25683) {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[RSC ERROR] scope=market-intelligence.repository:listMarketProfilesByCommunitySlug Error 
+[PrismaClientInitializationError]: 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Authentication failed against database server, the provided database credentials for `postgres` are not valid.
+
+Please make sure to provide valid database credentials for the database server at the configured address.
+    at async k (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:8795)
+    at async (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:1684)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async p (C:\Users\admin\agent 
+os\.next\server\app\(dashboard)\communities\[masterSlug]\[projectSlug]\page.js:1:25683) {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+   Generating static pages (31/42) 
+prisma:error 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Can't reach database server at `aws-1-ap-northeast-1.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-1-ap-northeast-1.pooler.supabase.com:5432`.
+prisma:error 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Can't reach database server at `aws-1-ap-northeast-1.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-1-ap-northeast-1.pooler.supabase.com:5432`.
+prisma:error 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Can't reach database server at `aws-1-ap-northeast-1.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-1-ap-northeast-1.pooler.supabase.com:5432`.
+prisma:error 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Can't reach database server at `aws-1-ap-northeast-1.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-1-ap-northeast-1.pooler.supabase.com:5432`.
+[RSC ERROR] scope=market-intelligence.repository:listMarketProfilesByCommunitySlug Error 
+[PrismaClientInitializationError]: 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Can't reach database server at `aws-1-ap-northeast-1.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-1-ap-northeast-1.pooler.supabase.com:5432`.
+    at async k (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:8795)
+    at async (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:1684)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async p (C:\Users\admin\agent 
+os\.next\server\app\(dashboard)\communities\[masterSlug]\[projectSlug]\page.js:1:25683) {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[RSC ERROR] scope=market-intelligence.repository:listMarketProfilesByCommunitySlug Error 
+[PrismaClientInitializationError]: 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Can't reach database server at `aws-1-ap-northeast-1.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-1-ap-northeast-1.pooler.supabase.com:5432`.
+    at async k (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:8795)
+    at async (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:1684)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async p (C:\Users\admin\agent 
+os\.next\server\app\(dashboard)\communities\[masterSlug]\[projectSlug]\page.js:1:25683) {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[RSC ERROR] scope=market-intelligence.repository:listMarketProfilesByCommunitySlug Error 
+[PrismaClientInitializationError]: 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Can't reach database server at `aws-1-ap-northeast-1.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-1-ap-northeast-1.pooler.supabase.com:5432`.
+    at async k (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:8795)
+    at async (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:1684)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async p (C:\Users\admin\agent 
+os\.next\server\app\(dashboard)\communities\[masterSlug]\[projectSlug]\page.js:1:25683) {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+[RSC ERROR] scope=market-intelligence.repository:listMarketProfilesByCommunitySlug Error 
+[PrismaClientInitializationError]: 
+Invalid `prisma.communityMarketIntelligence.findMany()` invocation:
+
+
+Can't reach database server at `aws-1-ap-northeast-1.pooler.supabase.com:5432`
+
+Please make sure your database server is running at `aws-1-ap-northeast-1.pooler.supabase.com:5432`.
+    at async k (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:8795)
+    at async (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:1684)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async e (C:\Users\admin\agent os\.next\server\chunks\4048.js:1:9531)
+    at async p (C:\Users\admin\agent 
+os\.next\server\app\(dashboard)\communities\[masterSlug]\[projectSlug]\page.js:1:25683) {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined
+}
+ Ô£ô Generating static pages (42/42)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                                     Size  First Load JS
+Ôöî Ôùï /                                                          227 B         102 kB
+Ôö£ Ôùï /_not-found                                                 1 kB         103 kB
+Ôö£ Ôùï /agents                                                    227 B         102 kB
+Ôö£ ãÆ /api/v1/agents                                             227 B         102 kB
+Ôö£ ãÆ /api/v1/agents/[id]                                        227 B         102 kB
+Ôö£ ãÆ /api/v1/communities                                        227 B         102 kB
+Ôö£ ãÆ /api/v1/communities/[id]                                   227 B         102 kB
+Ôö£ ãÆ /api/v1/import/headers                                     227 B         102 kB
+Ôö£ ãÆ /api/v1/import/pf-expert/commit                            227 B         102 kB
+Ôö£ ãÆ /api/v1/import/pf-expert/preview                           227 B         102 kB
+Ôö£ ãÆ /api/v1/market-intelligence                                227 B         102 kB
+Ôö£ ãÆ /api/v1/market-intelligence/[id]                           227 B         102 kB
+Ôö£ ãÆ /api/v1/owners/[id]                                        227 B         102 kB
+Ôö£ ãÆ /api/v1/owners/[id]/portfolio                              227 B         102 kB
+Ôö£ ãÆ /api/v1/properties                                         227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]                                    227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/comparables                        227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/deals                              227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/images                             227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/images/[imageId]                   227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/images/reorder                     227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/listings                           227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/market/refresh                     227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/offers                             227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/price-history                      227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/similar                            227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/tasks                              227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/[id]/viewings                           227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/filter-options                          227 B         102 kB
+Ôö£ ãÆ /api/v1/properties/search                                  227 B         102 kB
+Ôö£ ãÆ /auth/callback                                             227 B         102 kB
+Ôö£ ãÆ /auth/signout                                              227 B         102 kB
+Ôö£ Ôùï /communities                                              6.8 kB         122 kB
+Ôö£ ÔùÅ /communities/[masterSlug]/[projectSlug]                  8.32 kB         123 kB
+Ôö£   Ôö£ /communities/al-hamra-village/royal-breeze-residences
+Ôö£   Ôö£ /communities/al-hamra-village/marina-residences
+Ôö£   Ôö£ /communities/al-hamra-village/golf-apartments
+Ôö£   Ôöö [+14 more paths]
+Ôö£ Ôùï /crm                                                     8.61 kB         120 kB
+Ôö£ ãÆ /dashboard                                               3.62 kB         124 kB
+Ôö£ Ôùï /favorites                                                 227 B         102 kB
+Ôö£ Ôùï /import                                                  6.79 kB         156 kB
+Ôö£ Ôùï /intelligence                                              15 kB         155 kB
+Ôö£ Ôùï /login                                                   60.4 kB         181 kB
+Ôö£ ãÆ /market                                                  4.27 kB         144 kB
+Ôö£ Ôùï /market-analysis                                           227 B         102 kB
+Ôö£ ãÆ /properties/[id]                                         17.6 kB         148 kB
+Ôö£ ãÆ /search                                                  16.2 kB         193 kB
+Ôö£ Ôùï /settings                                                  170 B         106 kB
+Ôöö Ôùï /settings/market-intelligence                            40.6 kB         218 kB
++ First Load JS shared by all                                 102 kB
+  Ôö£ chunks/1255-b8cf77ab14370e57.js                            46 kB
+  Ôö£ chunks/4bd1b696-100b9d70ed4e49c1.js                      54.2 kB
+  Ôöö other shared chunks (total)                              2.01 kB
+
+
+ãÆ Middleware                                                 62.8 kB
+
+Ôùï  (Static)   prerendered as static content
+ÔùÅ  (SSG)      prerendered as static HTML (uses generateStaticParams)
+ãÆ  (Dynamic)  server-rendered on demand
+
