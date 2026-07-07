@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { cacheBuildings, cacheCommunities } from "@/lib/server-cache";
 
 import type { SearchFiltersInput } from "@/features/search/schemas/search-filters.schema";
-import { rscTry } from "@/lib/rsc-debug";
 
 const listingAgentSelect = {
   agent: { select: { user: { select: { fullName: true } } } },
@@ -282,15 +281,13 @@ export async function querySearchProperties(
 }
 
 export async function fetchSearchPageData(filters: SearchFiltersInput = {}) {
-  return rscTry("fetchSearchPageData.repository", async () => {
-    const [properties, communities, buildings] = await Promise.all([
-      querySearchProperties(filters),
-      getCommunityOptions(),
-      getBuildingOptions(filters.communityId),
-    ]);
+  const [properties, communities, buildings] = await Promise.all([
+    querySearchProperties(filters),
+    getCommunityOptions(),
+    getBuildingOptions(filters.communityId),
+  ]);
 
-    return { properties, communities, buildings };
-  });
+  return { properties, communities, buildings };
 }
 
 export function getAgentDisplayName(

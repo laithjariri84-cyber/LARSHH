@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { rscTry } from "@/lib/rsc-debug";
+import { getUser } from "@/lib/auth";
 import { isUiOnlyMode } from "@/lib/ui-only";
 
 export default async function HomePage() {
@@ -8,10 +8,7 @@ export default async function HomePage() {
     redirect("/intelligence");
   }
 
-  const user = await rscTry("home/page:getUser", async () => {
-    const { getUser } = await import("@/lib/auth");
-    return getUser();
-  });
+  const user = await getUser();
 
   redirect(user ? "/intelligence" : "/login");
 }

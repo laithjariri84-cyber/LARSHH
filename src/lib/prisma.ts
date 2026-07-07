@@ -1,10 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
-import { isPerfProfileEnabled, recordPerf } from "@/lib/perf/collector";
-import { isPerfLogEnabled, perfLog } from "@/lib/perf/timer";
-
 const globalForPrisma = globalThis as unknown as {
-  prisma: ReturnType<typeof createInstrumentedPrisma> | undefined;
+  prisma: PrismaClient | undefined;
   directPrisma: PrismaClient | undefined;
 };
 
@@ -42,7 +39,6 @@ function resolveDirectUrl(): string | undefined {
     return withConnectionLimit(direct);
   }
 
-  // Vercel deployments sometimes omit DIRECT_URL; fall back for runtime queries.
   const databaseUrl = process.env.DATABASE_URL?.trim();
   return databaseUrl ? withConnectionLimit(databaseUrl) : undefined;
 }
@@ -59,43 +55,12 @@ function createPrismaClient(databaseUrl: string): PrismaClient {
   });
 }
 
-function createInstrumentedPrisma(databaseUrl: string) {
-  const base = createPrismaClient(databaseUrl);
-  const shouldLog = isPerfLogEnabled();
-  const shouldCollect = isPerfProfileEnabled();
-
-  if (!shouldLog && !shouldCollect) {
-    return base;
-  }
-
-  return base.$extends({
-    query: {
-      async $allOperations({ model, operation, args, query }) {
-        const start = performance.now();
-        try {
-          return await query(args);
-        } finally {
-          const durationMs = performance.now() - start;
-          const scope = model ? `prisma.${model}.${operation}` : `prisma.${operation}`;
-          if (shouldLog) {
-            perfLog(scope, durationMs);
-          }
-          if (shouldCollect) {
-            recordPerf(scope.replace(/^prisma\./, ""), "prisma", durationMs);
-          }
-        }
-      },
-    },
-  });
-}
-
-export const prisma = (
-  globalForPrisma.prisma ?? createInstrumentedPrisma(resolveDatabaseUrl())
-) as PrismaClient;
+export const prisma =
+  globalForPrisma.prisma ?? createPrismaClient(resolveDatabaseUrl());
 
 /**
  * Session/direct connection for interactive transactions (imports, long writes).
- * Falls back to the pooled DATABASE_URL when DIRECT_URL is unset.
+ * Uses DIRECT_URL when set; otherwise falls back to DATABASE_URL.
  */
 export function getDirectPrisma(): PrismaClient {
   if (globalForPrisma.directPrisma) {
@@ -112,4 +77,8 @@ globalForPrisma.prisma = prisma;
 
 export function getDatabaseUrl(): string {
   return resolveDatabaseUrl();
+}
+
+export function getDirectDatabaseUrl(): string {
+  return resolveDirectUrl() ?? resolveDatabaseUrl();
 }

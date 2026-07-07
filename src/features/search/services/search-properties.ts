@@ -6,8 +6,6 @@ import {
   searchProperties as searchPropertiesFromDb,
   getPropertyById as getPropertyByIdFromDb,
 } from "@/lib/repositories/property.repository";
-import { rscTry } from "@/lib/rsc-debug";
-import { perfSync } from "@/lib/perf/timer";
 
 import type { SearchFiltersInput } from "../schemas/search-filters.schema";
 import type { FilterOption } from "../types";
@@ -16,61 +14,42 @@ import { mapPropertiesToSearchResults } from "../mappers/search.mapper";
 function mapSearchResultsSafely(
   properties: Awaited<ReturnType<typeof getAllPropertiesFromDb>>
 ) {
-  try {
-    return mapPropertiesToSearchResults(properties);
-  } catch (error) {
-    console.error("[RSC ERROR] scope=search-properties:mapPropertiesToSearchResults", error);
-    throw error;
-  }
+  return mapPropertiesToSearchResults(properties);
 }
 
 export async function getAllProperties() {
-  return rscTry("search-properties:getAllProperties", async () => {
-    const properties = await getAllPropertiesFromDb();
-    return mapSearchResultsSafely(properties);
-  });
+  const properties = await getAllPropertiesFromDb();
+  return mapSearchResultsSafely(properties);
 }
 
 export async function searchProperties(filters: SearchFiltersInput = {}) {
-  return rscTry("search-properties:searchProperties", async () => {
-    const properties = await searchPropertiesFromDb(filters);
-    return mapSearchResultsSafely(properties);
-  });
+  const properties = await searchPropertiesFromDb(filters);
+  return mapSearchResultsSafely(properties);
 }
 
 export async function loadSearchPageData(filters: SearchFiltersInput = {}) {
-  return rscTry("fetchSearchPageData", async () => {
-    const { properties, communities, buildings } =
-      await fetchSearchPageData(filters);
+  const { properties, communities, buildings } =
+    await fetchSearchPageData(filters);
 
-    return {
-      results: perfSync("mapPropertiesToSearchResults", () =>
-        mapSearchResultsSafely(properties)
-      ),
-      communities: communities.map((c) => ({ value: c.id, label: c.name })),
-      buildings: buildings.map((b) => ({ value: b.id, label: b.name })),
-    };
-  });
+  return {
+    results: mapSearchResultsSafely(properties),
+    communities: communities.map((c) => ({ value: c.id, label: c.name })),
+    buildings: buildings.map((b) => ({ value: b.id, label: b.name })),
+  };
 }
 
 export async function getPropertyById(id: string) {
-  return rscTry("search-properties:getPropertyById", () =>
-    getPropertyByIdFromDb(id)
-  );
+  return getPropertyByIdFromDb(id);
 }
 
 export async function getCommunityOptions(): Promise<FilterOption[]> {
-  return rscTry("search-properties:getCommunityOptions", async () => {
-    const communities = await getCommunityOptionsFromDb();
-    return communities.map((c) => ({ value: c.id, label: c.name }));
-  });
+  const communities = await getCommunityOptionsFromDb();
+  return communities.map((c) => ({ value: c.id, label: c.name }));
 }
 
 export async function getBuildingOptions(
   communityId?: string
 ): Promise<FilterOption[]> {
-  return rscTry("search-properties:getBuildingOptions", async () => {
-    const buildings = await getBuildingOptionsFromDb(communityId);
-    return buildings.map((b) => ({ value: b.id, label: b.name }));
-  });
+  const buildings = await getBuildingOptionsFromDb(communityId);
+  return buildings.map((b) => ({ value: b.id, label: b.name }));
 }

@@ -3,7 +3,6 @@ import {
   formatRentRange,
   type CommunityMarketSummary,
 } from "@/lib/market-intelligence/summary";
-import { rscTry } from "@/lib/rsc-debug";
 import { resolveCommunitySlug } from "@/server/market-intelligence/community-matcher";
 import {
   listMarketProfiles,
@@ -17,63 +16,54 @@ export async function getCommunityMarketSummary(
   communitySlug: string,
   bedroomCount?: number
 ): Promise<CommunityMarketSummary | null> {
-  return rscTry("market-intelligence.aggregate:getCommunityMarketSummary", async () => {
-    const communityProfiles = await listMarketProfilesByCommunitySlug(communitySlug);
+  const communityProfiles = await listMarketProfilesByCommunitySlug(communitySlug);
 
-    if (communityProfiles.length === 0) {
-      return null;
-    }
+  if (communityProfiles.length === 0) {
+    return null;
+  }
 
-    const scopedProfiles =
-      bedroomCount === undefined
-        ? communityProfiles
-        : communityProfiles.filter(
-            (profile) => profile.bedroomCount === bedroomCount
-          );
+  const scopedProfiles =
+    bedroomCount === undefined
+      ? communityProfiles
+      : communityProfiles.filter(
+          (profile) => profile.bedroomCount === bedroomCount
+        );
 
-    if (scopedProfiles.length === 0) {
-      return null;
-    }
+  if (scopedProfiles.length === 0) {
+    return null;
+  }
 
-    return buildCommunityMarketSummary(
-      communitySlug,
-      scopedProfiles[0]?.communityName ?? communitySlug,
-      scopedProfiles
-    );
-  });
+  return buildCommunityMarketSummary(
+    communitySlug,
+    scopedProfiles[0]?.communityName ?? communitySlug,
+    scopedProfiles
+  );
 }
 
 export async function listCommunityMarketSummaries(): Promise<
   CommunityMarketSummary[]
 > {
-  return rscTry("market-intelligence.aggregate:listCommunityMarketSummaries", async () => {
-    const profiles = await listMarketProfiles();
-    const grouped = new Map<string, typeof profiles>();
+  const profiles = await listMarketProfiles();
+  const grouped = new Map<string, typeof profiles>();
 
-    for (const profile of profiles) {
-      const rows = grouped.get(profile.communitySlug) ?? [];
-      rows.push(profile);
-      grouped.set(profile.communitySlug, rows);
-    }
+  for (const profile of profiles) {
+    const rows = grouped.get(profile.communitySlug) ?? [];
+    rows.push(profile);
+    grouped.set(profile.communitySlug, rows);
+  }
 
-    return Array.from(grouped.entries())
-      .map(([slug, rows]) =>
-        buildCommunityMarketSummary(slug, rows[0]?.communityName ?? slug, rows)
-      )
-      .sort((a, b) => a.communityName.localeCompare(b.communityName));
-  });
+  return Array.from(grouped.entries())
+    .map(([slug, rows]) =>
+      buildCommunityMarketSummary(slug, rows[0]?.communityName ?? slug, rows)
+    )
+    .sort((a, b) => a.communityName.localeCompare(b.communityName));
 }
 
 export async function getCommunityMarketSummaryByName(
   communityName: string,
   bedroomCount?: number
 ): Promise<CommunityMarketSummary | null> {
-  return rscTry(
-    "market-intelligence.aggregate:getCommunityMarketSummaryByName",
-    async () => {
-      const slug = resolveCommunitySlug(communityName);
-      if (!slug) return null;
-      return getCommunityMarketSummary(slug, bedroomCount);
-    }
-  );
+  const slug = resolveCommunitySlug(communityName);
+  if (!slug) return null;
+  return getCommunityMarketSummary(slug, bedroomCount);
 }

@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { perfAsync } from "@/lib/perf/timer";
 import { updateSession } from "@/lib/supabase/middleware";
 
 function isUiOnlyMode() {
@@ -8,15 +7,11 @@ function isUiOnlyMode() {
 }
 
 export async function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname;
+  if (isUiOnlyMode()) {
+    return NextResponse.next();
+  }
 
-  return perfAsync(`middleware ${path}`, async () => {
-    if (isUiOnlyMode()) {
-      return NextResponse.next();
-    }
-
-    return updateSession(request);
-  });
+  return updateSession(request);
 }
 
 export const config = {

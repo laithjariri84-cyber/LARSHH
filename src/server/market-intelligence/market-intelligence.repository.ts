@@ -2,7 +2,6 @@ import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { cacheMarketProfiles, cacheMarketRoiProfiles } from "@/lib/server-cache";
-import { perfAsync } from "@/lib/perf/timer";
 
 import type {
   CommunityMarketProfileRecord,
@@ -70,7 +69,7 @@ export async function findMarketProfile(
 
     return row ? mapProfile(row) : null;
   } catch (error) {
-    console.error("[RSC ERROR] scope=market-intelligence.repository:findMarketProfile", error);
+    console.error("[market-intelligence] findMarketProfile:", error);
     return null;
   }
 }
@@ -84,17 +83,12 @@ async function fetchMarketProfilesFromDb(): Promise<CommunityMarketProfileRecord
 }
 
 export async function listMarketProfiles(): Promise<CommunityMarketProfileRecord[]> {
-  return perfAsync("listMarketProfiles", async () => {
-    try {
-      return await cacheMarketProfiles(fetchMarketProfilesFromDb);
-    } catch (error) {
-      console.error(
-        "[RSC ERROR] scope=market-intelligence.repository:listMarketProfiles",
-        error
-      );
-      return [];
-    }
-  });
+  try {
+    return await cacheMarketProfiles(fetchMarketProfilesFromDb);
+  } catch (error) {
+    console.error("[market-intelligence] listMarketProfiles:", error);
+    return [];
+  }
 }
 
 async function fetchMarketRoiProfilesFromDb(): Promise<MarketRoiProfile[]> {
@@ -116,17 +110,12 @@ async function fetchMarketRoiProfilesFromDb(): Promise<MarketRoiProfile[]> {
 
 /** Slim profile list for search ROI enrichment — 3 columns vs full row. */
 export async function listMarketRoiProfiles(): Promise<MarketRoiProfile[]> {
-  return perfAsync("listMarketRoiProfiles", async () => {
-    try {
-      return await cacheMarketRoiProfiles(fetchMarketRoiProfilesFromDb);
-    } catch (error) {
-      console.error(
-        "[RSC ERROR] scope=market-intelligence.repository:listMarketRoiProfiles",
-        error
-      );
-      return [];
-    }
-  });
+  try {
+    return await cacheMarketRoiProfiles(fetchMarketRoiProfilesFromDb);
+  } catch (error) {
+    console.error("[market-intelligence] listMarketRoiProfiles:", error);
+    return [];
+  }
 }
 
 export async function listMarketProfilesByCommunitySlug(
@@ -141,7 +130,7 @@ export async function listMarketProfilesByCommunitySlug(
     return rows.map(mapProfile);
   } catch (error) {
     console.error(
-      "[RSC ERROR] scope=market-intelligence.repository:listMarketProfilesByCommunitySlug",
+      "[market-intelligence] listMarketProfilesByCommunitySlug:",
       error
     );
     return [];

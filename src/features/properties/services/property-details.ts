@@ -6,7 +6,6 @@ import {
   getSimilarProperties as getSimilarPropertiesFromDb,
 } from "@/lib/repositories/property.repository";
 import { computePropertyMarketIntelligence } from "@/server/market-intelligence";
-import { rscTry } from "@/lib/rsc-debug";
 
 import {
   mapPropertyToDetailsViewModel,
@@ -87,11 +86,9 @@ async function loadPropertyDetailsById(
 }
 
 export const getPropertyDetailsById = cache(async (id: string) => {
-  return rscTry("getPropertyDetailsById", () => loadPropertyDetailsById(id));
+  return loadPropertyDetailsById(id);
 });
 
 export async function getPropertyDetailsRecord(id: string) {
-  return rscTry("property-details:getPropertyDetailsRecord", () =>
-    getPropertyByIdFromDb(id)
-  );
+  return getPropertyByIdFromDb(id);
 }

@@ -13,7 +13,7 @@ type RootErrorProps = {
 
 export default function RootError({ error, reset }: RootErrorProps) {
   useEffect(() => {
-    console.error("[RSC ERROR] scope=app/error-boundary", {
+    console.error("[app/error-boundary]", {
       message: error.message,
       digest: error.digest,
       stack: error.stack,
@@ -30,8 +30,7 @@ export default function RootError({ error, reset }: RootErrorProps) {
           Something went wrong
         </h1>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-          A server error occurred. Check Vercel Function logs for{" "}
-          <code className="text-xs">[RSC ERROR]</code> entries.
+          A server error occurred. Please try again or return to login.
         </p>
         {error.digest ? (
           <p className="text-muted-foreground mt-3 font-mono text-xs">

@@ -7,7 +7,6 @@ import {
   getProjectBySlugs,
 } from "@/features/communities/lib/community-registry";
 import { getCommunityMarketSummaryByName } from "@/server/market-intelligence";
-import { logRscError, rscTry } from "@/lib/rsc-debug";
 
 type CommunityIntelligencePageProps = {
   params: Promise<{
@@ -23,46 +22,35 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: CommunityIntelligencePageProps): Promise<Metadata> {
-  try {
-    const { masterSlug, projectSlug } = await params;
-    const match = getProjectBySlugs(masterSlug, projectSlug);
+  const { masterSlug, projectSlug } = await params;
+  const match = getProjectBySlugs(masterSlug, projectSlug);
 
-    if (!match) {
-      return { title: "Community Intelligence" };
-    }
-
-    return {
-      title: `${match.project.name} · Community Intelligence`,
-    };
-  } catch (error) {
-    logRscError("communities/[masterSlug]/[projectSlug]/generateMetadata", error);
+  if (!match) {
+    return { title: "Community Intelligence" };
   }
+
+  return {
+    title: `${match.project.name} · Community Intelligence`,
+  };
 }
 
 export default async function CommunityIntelligencePage({
   params,
 }: CommunityIntelligencePageProps) {
-  try {
-    const { masterSlug, projectSlug } = await params;
-    const match = getProjectBySlugs(masterSlug, projectSlug);
+  const { masterSlug, projectSlug } = await params;
+  const match = getProjectBySlugs(masterSlug, projectSlug);
 
-    if (!match) {
-      notFound();
-    }
-
-    const marketSummary = await rscTry(
-      "communities/[masterSlug]/[projectSlug]/page:getCommunityMarketSummaryByName",
-      () => getCommunityMarketSummaryByName(match.project.name)
-    );
-
-    return (
-      <CommunityIntelligenceView
-        master={match.master}
-        project={match.project}
-        marketSummary={marketSummary}
-      />
-    );
-  } catch (error) {
-    logRscError("communities/[masterSlug]/[projectSlug]/page:render", error);
+  if (!match) {
+    notFound();
   }
+
+  const marketSummary = await getCommunityMarketSummaryByName(match.project.name);
+
+  return (
+    <CommunityIntelligenceView
+      master={match.master}
+      project={match.project}
+      marketSummary={marketSummary}
+    />
+  );
 }

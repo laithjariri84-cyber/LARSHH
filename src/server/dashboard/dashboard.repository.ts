@@ -2,7 +2,6 @@ import { ListingStatus, ListingType, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { cacheDashboardMetrics } from "@/lib/server-cache";
-import { rscTry } from "@/lib/rsc-debug";
 
 import type { DashboardQueryScope } from "./dashboard.types";
 
@@ -136,8 +135,6 @@ export async function queryDashboardMetrics(
 export async function fetchDashboardMetrics(
   scope: DashboardQueryScope
 ): Promise<DashboardMetrics> {
-  return rscTry("fetchDashboardMetrics", async () => {
-    const scopeKey = scope.agentId ?? "global";
-    return cacheDashboardMetrics(scopeKey, () => queryDashboardMetrics(scope));
-  });
+  const scopeKey = scope.agentId ?? "global";
+  return cacheDashboardMetrics(scopeKey, () => queryDashboardMetrics(scope));
 }

@@ -9,7 +9,7 @@ type GlobalErrorProps = {
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    console.error("[RSC ERROR] scope=global-error-boundary", {
+    console.error("[global-error-boundary]", {
       message: error.message,
       digest: error.digest,
       stack: error.stack,

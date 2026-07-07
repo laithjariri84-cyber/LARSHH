@@ -13,7 +13,7 @@ type DashboardErrorProps = {
 
 export default function DashboardError({ error, reset }: DashboardErrorProps) {
   useEffect(() => {
-    console.error("[RSC ERROR] scope=dashboard/error-boundary", {
+    console.error("[dashboard/error-boundary]", {
       message: error.message,
       digest: error.digest,
       stack: error.stack,
