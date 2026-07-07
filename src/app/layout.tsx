@@ -5,6 +5,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { LARSSH_BRAND } from "@/lib/brand";
+import { themeInitScript } from "@/lib/theme/constants";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +16,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-const themeInitScript = `(function(){try{var t=localStorage.getItem("larssh-theme");if(t==="light"||t==="dark"){document.documentElement.classList.toggle("dark",t==="dark");return;}if(window.matchMedia("(prefers-color-scheme: dark)").matches){document.documentElement.classList.add("dark");}}catch(e){}})();`;
 
 export const metadata: Metadata = {
   title: { default: LARSSH_BRAND.name, template: `%s | ${LARSSH_BRAND.name}` },
@@ -34,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

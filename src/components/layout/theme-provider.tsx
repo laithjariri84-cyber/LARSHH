@@ -9,58 +9,74 @@ import {
   useState,
 } from "react";
 
-export type Theme = "light" | "dark";
+import {
+  applyResolvedTheme,
+  DEFAULT_THEME_PREFERENCE,
+  isThemePreference,
+  readSystemPrefersDark,
+  resolveThemePreference,
+  THEME_STORAGE_KEY,
+  type ResolvedTheme,
+  type ThemePreference,
+} from "@/lib/theme/constants";
 
 type ThemeContextValue = {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  toggleTheme: () => void;
+  /** Stored user choice: light, dark, or system. */
+  preference: ThemePreference;
+  /** Active palette applied to the document. */
+  resolvedTheme: ResolvedTheme;
+  setPreference: (preference: ThemePreference) => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const STORAGE_KEY = "larssh-theme";
-
-function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle("dark", theme === "dark");
-}
-
-function readStoredTheme(): Theme | null {
-  if (typeof window === "undefined") return null;
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === "light" || stored === "dark" ? stored : null;
+function readStoredPreference(): ThemePreference {
+  if (typeof window === "undefined") return DEFAULT_THEME_PREFERENCE;
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  return isThemePreference(stored) ? stored : DEFAULT_THEME_PREFERENCE;
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const [preference, setPreferenceState] = useState<ThemePreference>(
+    DEFAULT_THEME_PREFERENCE
+  );
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("dark");
+
+  const syncTheme = useCallback((nextPreference: ThemePreference) => {
+    const prefersDark = readSystemPrefersDark();
+    const resolved = resolveThemePreference(nextPreference, prefersDark);
+    setResolvedTheme(resolved);
+    applyResolvedTheme(resolved);
+  }, []);
 
   useEffect(() => {
-    const stored = readStoredTheme();
-    const resolved =
-      stored ??
-      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    setThemeState(resolved);
-    applyTheme(resolved);
-  }, []);
+    const stored = readStoredPreference();
+    setPreferenceState(stored);
+    syncTheme(stored);
+  }, [syncTheme]);
 
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-    localStorage.setItem(STORAGE_KEY, next);
-    applyTheme(next);
-  }, []);
+  useEffect(() => {
+    if (preference !== "system") return;
 
-  const toggleTheme = useCallback(() => {
-    setThemeState((current) => {
-      const next: Theme = current === "dark" ? "light" : "dark";
-      localStorage.setItem(STORAGE_KEY, next);
-      applyTheme(next);
-      return next;
-    });
-  }, []);
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => syncTheme("system");
+
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, [preference, syncTheme]);
+
+  const setPreference = useCallback(
+    (next: ThemePreference) => {
+      setPreferenceState(next);
+      localStorage.setItem(THEME_STORAGE_KEY, next);
+      syncTheme(next);
+    },
+    [syncTheme]
+  );
 
   const value = useMemo(
-    () => ({ theme, setTheme, toggleTheme }),
-    [theme, setTheme, toggleTheme]
+    () => ({ preference, resolvedTheme, setPreference }),
+    [preference, resolvedTheme, setPreference]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

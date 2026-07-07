@@ -5,11 +5,11 @@ import { Toaster as Sonner } from "sonner";
 import { useTheme } from "@/components/layout/theme-provider";
 
 export function Toaster() {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
 
   return (
     <Sonner
-      theme={theme}
+      theme={resolvedTheme}
       position="top-right"
       toastOptions={{
         classNames: {

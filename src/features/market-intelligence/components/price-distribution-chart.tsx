@@ -19,7 +19,7 @@ export function PriceDistributionChart({ data }: PriceDistributionChartProps) {
                   "w-full rounded-t-xl bg-gradient-to-t transition-all duration-700",
                   index === data.findIndex((item) => item.count === maxCount)
                     ? "from-gold/30 to-gold shadow-lg shadow-gold/10"
-                    : "from-white/10 to-white/20 hover:from-gold/20 hover:to-gold/40"
+                    : "from-muted/50 to-muted hover:from-gold/20 hover:to-gold/40"
                 )}
                 style={{
                   height: `${Math.max((bucket.count / maxCount) * 100, bucket.count > 0 ? 12 : 4)}%`,
@@ -42,7 +42,7 @@ export function PriceDistributionChart({ data }: PriceDistributionChartProps) {
         {data.map((bucket) => (
           <div
             key={`${bucket.label}-legend`}
-            className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-center"
+            className="border-border bg-muted/40 rounded-lg border px-3 py-2 text-center"
           >
             <p className="text-muted-foreground text-[10px]">{bucket.label}</p>
             <p className="mt-1 text-sm font-medium">

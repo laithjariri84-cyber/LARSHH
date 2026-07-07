@@ -4,14 +4,11 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Bell, Menu } from "lucide-react";
 
-import { mockUser } from "@/features/dashboard/data/mock-dashboard";
-import { cn } from "@/lib/utils";
-
 import { PageTransition } from "@/components/ui/page-transition";
 
 import { Breadcrumbs } from "./breadcrumbs";
 import { ParagonSidebar } from "./paragon-sidebar";
-import { ThemeToggle } from "./theme-toggle";
+import { UserMenu } from "./user-menu";
 
 type ParagonShellProps = {
   children: React.ReactNode;
@@ -103,7 +100,6 @@ export function ParagonShell({ children }: ParagonShellProps) {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <ThemeToggle />
             <button
               type="button"
               className="text-muted-foreground hover:text-gold relative min-h-11 min-w-11 rounded-lg p-2 transition-colors hover:bg-accent"
@@ -112,19 +108,8 @@ export function ParagonShell({ children }: ParagonShellProps) {
               <Bell className="size-4" />
               <span className="bg-gold absolute top-1.5 right-1.5 size-1.5 rounded-full" />
             </button>
-            <div className="flex items-center gap-3 border-l border-border pl-2 sm:pl-3">
-              <div className="hidden text-right sm:block">
-                <p className="text-sm font-medium">{mockUser.name}</p>
-                <p className="text-muted-foreground text-xs">{mockUser.role}</p>
-              </div>
-              <div
-                className={cn(
-                  "paragon-gold-gradient flex size-9 items-center justify-center rounded-full text-xs font-semibold",
-                  "text-gold-foreground shadow-md shadow-gold/20"
-                )}
-              >
-                {mockUser.initials}
-              </div>
+            <div className="border-border border-l pl-2 sm:pl-3">
+              <UserMenu />
             </div>
           </div>
         </header>
