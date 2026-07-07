@@ -1,15 +1,23 @@
 import { PrismaClient } from "@prisma/client";
 
+import { isPerfProfileEnabled, recordPerf } from "@/lib/perf/collector";
+import { isPerfLogEnabled, perfLog } from "@/lib/perf/timer";
+
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  prisma: ReturnType<typeof createInstrumentedPrisma> | undefined;
   directPrisma: PrismaClient | undefined;
 };
 
 function withConnectionLimit(url: string): string {
+  const limit = process.env.PRISMA_CONNECTION_LIMIT?.trim();
+  if (!limit) {
+    return url;
+  }
+
   try {
     const parsed = new URL(url);
     if (!parsed.searchParams.has("connection_limit")) {
-      parsed.searchParams.set("connection_limit", "1");
+      parsed.searchParams.set("connection_limit", limit);
     }
     return parsed.toString();
   } catch {
@@ -51,8 +59,39 @@ function createPrismaClient(databaseUrl: string): PrismaClient {
   });
 }
 
-export const prisma =
-  globalForPrisma.prisma ?? createPrismaClient(resolveDatabaseUrl());
+function createInstrumentedPrisma(databaseUrl: string) {
+  const base = createPrismaClient(databaseUrl);
+  const shouldLog = isPerfLogEnabled();
+  const shouldCollect = isPerfProfileEnabled();
+
+  if (!shouldLog && !shouldCollect) {
+    return base;
+  }
+
+  return base.$extends({
+    query: {
+      async $allOperations({ model, operation, args, query }) {
+        const start = performance.now();
+        try {
+          return await query(args);
+        } finally {
+          const durationMs = performance.now() - start;
+          const scope = model ? `prisma.${model}.${operation}` : `prisma.${operation}`;
+          if (shouldLog) {
+            perfLog(scope, durationMs);
+          }
+          if (shouldCollect) {
+            recordPerf(scope.replace(/^prisma\./, ""), "prisma", durationMs);
+          }
+        }
+      },
+    },
+  });
+}
+
+export const prisma = (
+  globalForPrisma.prisma ?? createInstrumentedPrisma(resolveDatabaseUrl())
+) as PrismaClient;
 
 /**
  * Session/direct connection for interactive transactions (imports, long writes).

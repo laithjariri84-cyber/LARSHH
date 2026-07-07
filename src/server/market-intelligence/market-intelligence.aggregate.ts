@@ -5,7 +5,10 @@ import {
 } from "@/lib/market-intelligence/summary";
 import { rscTry } from "@/lib/rsc-debug";
 import { resolveCommunitySlug } from "@/server/market-intelligence/community-matcher";
-import { listMarketProfiles } from "@/server/market-intelligence/market-intelligence.repository";
+import {
+  listMarketProfiles,
+  listMarketProfilesByCommunitySlug,
+} from "@/server/market-intelligence/market-intelligence.repository";
 
 export type { CommunityMarketSummary } from "@/lib/market-intelligence/summary";
 export { buildCommunityMarketSummary, formatRentRange };
@@ -15,10 +18,7 @@ export async function getCommunityMarketSummary(
   bedroomCount?: number
 ): Promise<CommunityMarketSummary | null> {
   return rscTry("market-intelligence.aggregate:getCommunityMarketSummary", async () => {
-    const profiles = await listMarketProfiles();
-    const communityProfiles = profiles.filter(
-      (profile) => profile.communitySlug === communitySlug
-    );
+    const communityProfiles = await listMarketProfilesByCommunitySlug(communitySlug);
 
     if (communityProfiles.length === 0) {
       return null;

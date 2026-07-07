@@ -1,11 +1,19 @@
 import type { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { cacheMarketProfiles, cacheMarketRoiProfiles } from "@/lib/server-cache";
+import { perfAsync } from "@/lib/perf/timer";
 
 import type {
   CommunityMarketProfileRecord,
   UpdateCommunityMarketProfileInput,
 } from "./market-intelligence.types";
+
+export type MarketRoiProfile = {
+  communitySlug: string;
+  bedroomCount: number;
+  estimatedRoiPercent: number | null;
+};
 
 function decimalToNumber(value: Prisma.Decimal | null | undefined): number | null {
   if (value === null || value === undefined) return null;
@@ -67,15 +75,75 @@ export async function findMarketProfile(
   }
 }
 
+async function fetchMarketProfilesFromDb(): Promise<CommunityMarketProfileRecord[]> {
+  const rows = await prisma.communityMarketIntelligence.findMany({
+    orderBy: [{ communityName: "asc" }, { bedroomCount: "asc" }],
+  });
+
+  return rows.map(mapProfile);
+}
+
 export async function listMarketProfiles(): Promise<CommunityMarketProfileRecord[]> {
+  return perfAsync("listMarketProfiles", async () => {
+    try {
+      return await cacheMarketProfiles(fetchMarketProfilesFromDb);
+    } catch (error) {
+      console.error(
+        "[RSC ERROR] scope=market-intelligence.repository:listMarketProfiles",
+        error
+      );
+      return [];
+    }
+  });
+}
+
+async function fetchMarketRoiProfilesFromDb(): Promise<MarketRoiProfile[]> {
+  const rows = await prisma.communityMarketIntelligence.findMany({
+    select: {
+      communitySlug: true,
+      bedroomCount: true,
+      estimatedRoiPercent: true,
+    },
+    orderBy: [{ communitySlug: "asc" }, { bedroomCount: "asc" }],
+  });
+
+  return rows.map((row) => ({
+    communitySlug: row.communitySlug,
+    bedroomCount: row.bedroomCount,
+    estimatedRoiPercent: decimalToNumber(row.estimatedRoiPercent),
+  }));
+}
+
+/** Slim profile list for search ROI enrichment — 3 columns vs full row. */
+export async function listMarketRoiProfiles(): Promise<MarketRoiProfile[]> {
+  return perfAsync("listMarketRoiProfiles", async () => {
+    try {
+      return await cacheMarketRoiProfiles(fetchMarketRoiProfilesFromDb);
+    } catch (error) {
+      console.error(
+        "[RSC ERROR] scope=market-intelligence.repository:listMarketRoiProfiles",
+        error
+      );
+      return [];
+    }
+  });
+}
+
+export async function listMarketProfilesByCommunitySlug(
+  communitySlug: string
+): Promise<CommunityMarketProfileRecord[]> {
   try {
     const rows = await prisma.communityMarketIntelligence.findMany({
-      orderBy: [{ communityName: "asc" }, { bedroomCount: "asc" }],
+      where: { communitySlug },
+      orderBy: { bedroomCount: "asc" },
     });
 
     return rows.map(mapProfile);
   } catch (error) {
-    console.error("[RSC ERROR] scope=market-intelligence.repository:listMarketProfiles", error);
+    console.error(
+      "[RSC ERROR] scope=market-intelligence.repository:listMarketProfilesByCommunitySlug",
+      error
+    );
     return [];
   }
 }

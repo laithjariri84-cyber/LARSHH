@@ -10,6 +10,7 @@ export const metadata: Metadata = {
     "Community pricing benchmarks from the LARSSH Market Intelligence database.",
 };
 
+/** Data is cached via unstable_cache; page stays dynamic to avoid build-time DB dependency. */
 export const dynamic = "force-dynamic";
 
 export default async function MarketPage() {

@@ -3,6 +3,8 @@
  * Remove once the production crash root cause is confirmed.
  */
 
+import { perfLog } from "@/lib/perf/timer";
+
 function formatError(error: unknown): Record<string, unknown> {
   if (error instanceof Error) {
     return {
@@ -28,17 +30,23 @@ export function logRscError(scope: string, error: unknown): never {
 }
 
 export async function rscTry<T>(scope: string, fn: () => Promise<T>): Promise<T> {
+  const start = performance.now();
   try {
     return await fn();
   } catch (error) {
     logRscError(scope, error);
+  } finally {
+    perfLog(scope, performance.now() - start);
   }
 }
 
 export function rscTrySync<T>(scope: string, fn: () => T): T {
+  const start = performance.now();
   try {
     return fn();
   } catch (error) {
     logRscError(scope, error);
+  } finally {
+    perfLog(scope, performance.now() - start);
   }
 }

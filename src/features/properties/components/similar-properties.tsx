@@ -4,9 +4,8 @@ import { ArrowRight, Building2 } from "lucide-react";
 
 import { ListingStatus } from "@prisma/client";
 
-
-
 import { Badge } from "@/components/ui/badge";
+import { OptimizedListingImage } from "@/components/ui/optimized-listing-image";
 
 import { Button } from "@/components/ui/button";
 
@@ -114,17 +113,13 @@ export function SimilarProperties({
 
               <div className="relative aspect-[16/10] overflow-hidden">
 
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-
-                <img
+                <OptimizedListingImage
 
                   src={getPropertyCardImage(property.propertyId)}
 
                   alt={property.building}
 
-                  loading="lazy"
-
-                  className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="transition-transform duration-500 group-hover:scale-105"
 
                 />
 

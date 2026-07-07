@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { PropertyDetailsView } from "@/features/properties/components/property-details-view";
 import { getPropertyDetailsById } from "@/features/properties/services/property-details";
 import { logRscError, rscTry } from "@/lib/rsc-debug";
+import { perfAsync } from "@/lib/perf/timer";
 
 export async function generateMetadata({
   params,
@@ -37,17 +38,18 @@ type PropertyDetailsPageProps = {
 export default async function PropertyDetailsPage({
   params,
 }: PropertyDetailsPageProps) {
-  try {
-    const { id } = await params;
-    const property = await rscTry(
-      "properties/[id]/page:getPropertyDetailsById",
-      () => getPropertyDetailsById(id)
-    );
+  return perfAsync("Property Details render", async () => {
+    try {
+      const { id } = await params;
+      const property = await rscTry("getPropertyDetailsById", () =>
+        getPropertyDetailsById(id)
+      );
 
-    if (!property) notFound();
+      if (!property) notFound();
 
-    return <PropertyDetailsView property={property} />;
-  } catch (error) {
-    logRscError("properties/[id]/page:render", error);
-  }
+      return <PropertyDetailsView property={property} />;
+    } catch (error) {
+      logRscError("properties/[id]/page:render", error);
+    }
+  });
 }

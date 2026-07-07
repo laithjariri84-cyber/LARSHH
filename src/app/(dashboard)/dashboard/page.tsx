@@ -23,20 +23,23 @@ import { StatCards } from "@/features/dashboard/components/stat-cards";
 import { WelcomeHeader } from "@/features/dashboard/components/welcome-header";
 import { getDashboardStatistics } from "@/server/dashboard";
 import { logRscError, rscTry } from "@/lib/rsc-debug";
+import { perfAsync } from "@/lib/perf/timer";
 
 export const metadata: Metadata = {
   title: "Dashboard",
 };
 
+/** Agent-scoped stats require auth + live DB — skip build-time prerender. */
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  try {
-    const stats = await rscTry("dashboard/page:getDashboardStatistics", () =>
-      getDashboardStatistics()
-    );
+  return perfAsync("Dashboard render", async () => {
+    try {
+      const stats = await rscTry("getDashboardStatistics", () =>
+        getDashboardStatistics()
+      );
 
-    return (
+      return (
       <div className="larssh-page">
         <WelcomeHeader name={mockUser.name} />
 
@@ -71,7 +74,8 @@ export default async function DashboardPage() {
         </div>
       </div>
     );
-  } catch (error) {
-    logRscError("dashboard/page:render", error);
-  }
+    } catch (error) {
+      logRscError("dashboard/page:render", error);
+    }
+  });
 }

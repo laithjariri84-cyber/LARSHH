@@ -15,6 +15,7 @@ export {
   searchProperties,
   getCommunityOptions,
   getBuildingOptions,
+  propertySearchSelect,
   propertySearchInclude,
   propertyDetailsInclude,
   similarPropertyInclude,

@@ -2,7 +2,7 @@ import {
   normalizeBedroomCount,
   resolveCommunitySlug,
 } from "@/server/market-intelligence/community-matcher";
-import { listMarketProfiles } from "@/server/market-intelligence/market-intelligence.repository";
+import { listMarketRoiProfiles } from "@/server/market-intelligence/market-intelligence.repository";
 import { rscTry } from "@/lib/rsc-debug";
 
 import type { PropertySearchResult } from "../types";
@@ -12,8 +12,8 @@ export async function enrichSearchResultsWithMarketIntelligence(
 ): Promise<PropertySearchResult[]> {
   if (results.length === 0) return results;
 
-  return rscTry("enrich-search-intelligence:enrich", async () => {
-    const profiles = await listMarketProfiles();
+  return rscTry("enrichSearchResultsWithMarketIntelligence", async () => {
+    const profiles = await listMarketRoiProfiles();
     const profileByKey = new Map(
       profiles.map((profile) => [
         `${profile.communitySlug}:${profile.bedroomCount}`,

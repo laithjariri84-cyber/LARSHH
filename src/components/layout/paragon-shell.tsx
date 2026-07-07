@@ -9,7 +9,9 @@ import { cn } from "@/lib/utils";
 
 import { PageTransition } from "@/components/ui/page-transition";
 
+import { Breadcrumbs } from "./breadcrumbs";
 import { ParagonSidebar } from "./paragon-sidebar";
+import { ThemeToggle } from "./theme-toggle";
 
 type ParagonShellProps = {
   children: React.ReactNode;
@@ -71,7 +73,7 @@ export function ParagonShell({ children }: ParagonShellProps) {
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 animate-backdrop-in bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 animate-backdrop-in bg-black/50 backdrop-blur-sm dark:bg-black/60"
             onClick={closeMobileDrawer}
             aria-label="Close menu"
           />
@@ -87,28 +89,30 @@ export function ParagonShell({ children }: ParagonShellProps) {
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/5 bg-background/80 px-4 backdrop-blur-xl lg:px-6">
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-gold min-h-11 min-w-11 rounded-lg p-2 lg:hidden"
-            onClick={() => setMobileOpen(true)}
-            aria-label="Open menu"
-          >
-            <Menu className="size-5" />
-          </button>
-
-          <div className="hidden lg:block" />
-
-          <div className="flex items-center gap-3">
+        <header className="bg-background/80 sticky top-0 z-40 flex min-h-14 flex-wrap items-center justify-between gap-3 border-b border-border px-4 backdrop-blur-xl lg:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <button
               type="button"
-              className="text-muted-foreground hover:text-gold relative min-h-11 min-w-11 rounded-lg p-2 transition-colors hover:bg-white/5"
+              className="text-muted-foreground hover:text-gold min-h-11 min-w-11 rounded-lg p-2 lg:hidden"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="size-5" />
+            </button>
+            <Breadcrumbs className="hidden sm:flex" />
+          </div>
+
+          <div className="flex items-center gap-1 sm:gap-2">
+            <ThemeToggle />
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-gold relative min-h-11 min-w-11 rounded-lg p-2 transition-colors hover:bg-accent"
               aria-label="Notifications"
             >
               <Bell className="size-4" />
               <span className="bg-gold absolute top-1.5 right-1.5 size-1.5 rounded-full" />
             </button>
-            <div className="flex items-center gap-3 border-l border-white/5 pl-3">
+            <div className="flex items-center gap-3 border-l border-border pl-2 sm:pl-3">
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-medium">{mockUser.name}</p>
                 <p className="text-muted-foreground text-xs">{mockUser.role}</p>
@@ -124,6 +128,10 @@ export function ParagonShell({ children }: ParagonShellProps) {
             </div>
           </div>
         </header>
+
+        <div className="border-border border-b px-4 py-2 sm:hidden">
+          <Breadcrumbs />
+        </div>
 
         <main className="flex-1 overflow-x-hidden">
           <PageTransition>{children}</PageTransition>

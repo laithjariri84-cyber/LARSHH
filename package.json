@@ -20,6 +20,8 @@
     "db:seed:market": "tsx prisma/seed-market-intelligence.ts",
     "db:studio": "prisma studio",
     "db:validate": "prisma validate",
+    "profile:pages": "tsx scripts/profile-pages.ts",
+    "benchmark:db": "tsx scripts/benchmark-db.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

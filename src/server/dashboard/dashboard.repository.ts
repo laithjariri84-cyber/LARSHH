@@ -1,6 +1,7 @@
-import { ListingStatus, ListingType, type Prisma } from "@prisma/client";
+import { ListingStatus, ListingType, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { cacheDashboardMetrics } from "@/lib/server-cache";
 import { rscTry } from "@/lib/rsc-debug";
 
 import type { DashboardQueryScope } from "./dashboard.types";
@@ -20,164 +21,123 @@ export type DashboardMetrics = {
   previousMonthCommunities: number;
 };
 
-function listingScopeWhere(
-  scope: DashboardQueryScope,
-  extra: Prisma.ListingWhereInput = {}
-): Prisma.ListingWhereInput {
-  const where: Prisma.ListingWhereInput = {
-    deletedAt: null,
-    ...extra,
-  };
+type DashboardMetricsRow = {
+  active_listings: number;
+  rentals: number;
+  sales: number;
+  communities: number;
+  current_month_listings: number;
+  previous_month_listings: number;
+  current_month_rentals: number;
+  previous_month_rentals: number;
+  current_month_sales: number;
+  previous_month_sales: number;
+  current_month_communities: number;
+  previous_month_communities: number;
+};
 
-  if (scope.agentId) {
-    where.agentId = scope.agentId;
-  }
-
-  return where;
-}
-
-function propertyWithListingWhere(
-  scope: DashboardQueryScope,
-  listingFilter: Prisma.ListingWhereInput
-): Prisma.PropertyWhereInput {
+function mapDashboardMetricsRow(row: DashboardMetricsRow | undefined): DashboardMetrics {
   return {
-    deletedAt: null,
-    listings: {
-      some: listingScopeWhere(scope, listingFilter),
-    },
+    activeListings: row?.active_listings ?? 0,
+    rentals: row?.rentals ?? 0,
+    sales: row?.sales ?? 0,
+    communities: row?.communities ?? 0,
+    currentMonthListings: row?.current_month_listings ?? 0,
+    previousMonthListings: row?.previous_month_listings ?? 0,
+    currentMonthRentals: row?.current_month_rentals ?? 0,
+    previousMonthRentals: row?.previous_month_rentals ?? 0,
+    currentMonthSales: row?.current_month_sales ?? 0,
+    previousMonthSales: row?.previous_month_sales ?? 0,
+    currentMonthCommunities: row?.current_month_communities ?? 0,
+    previousMonthCommunities: row?.previous_month_communities ?? 0,
   };
 }
 
-function monthBounds(monthsAgo: number): { start: Date; end: Date } {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
-  const end = new Date(
-    now.getFullYear(),
-    now.getMonth() - monthsAgo + 1,
-    0,
-    23,
-    59,
-    59,
-    999
-  );
+export async function queryDashboardMetrics(
+  scope: DashboardQueryScope
+): Promise<DashboardMetrics> {
+  const agentClause = scope.agentId
+    ? Prisma.sql`AND l.agent_id = ${scope.agentId}::uuid`
+    : Prisma.empty;
 
-  return { start, end };
-}
+  const rows = await prisma.$queryRaw<DashboardMetricsRow[]>(Prisma.sql`
+    WITH scoped_listings AS (
+      SELECT
+        l.listing_type,
+        l.status,
+        l.created_at,
+        p.id AS property_id,
+        p.community_id
+      FROM listings l
+      INNER JOIN properties p ON p.id = l.property_id
+      WHERE l.deleted_at IS NULL
+        AND p.deleted_at IS NULL
+        ${agentClause}
+    ),
+    month_bounds AS (
+      SELECT
+        date_trunc('month', CURRENT_TIMESTAMP) AS curr_start,
+        (date_trunc('month', CURRENT_TIMESTAMP) + INTERVAL '1 month' - INTERVAL '1 second') AS curr_end,
+        date_trunc('month', CURRENT_TIMESTAMP - INTERVAL '1 month') AS prev_start,
+        (date_trunc('month', CURRENT_TIMESTAMP) - INTERVAL '1 second') AS prev_end
+    )
+    SELECT
+      COUNT(DISTINCT sl.property_id) FILTER (
+        WHERE sl.status = ${ListingStatus.ACTIVE}
+      )::int AS active_listings,
+      COUNT(DISTINCT sl.property_id) FILTER (
+        WHERE sl.listing_type = ${ListingType.RENT}
+      )::int AS rentals,
+      COUNT(DISTINCT sl.property_id) FILTER (
+        WHERE sl.listing_type = ${ListingType.SALE}
+      )::int AS sales,
+      COUNT(DISTINCT sl.community_id) FILTER (
+        WHERE sl.status = ${ListingStatus.ACTIVE}
+      )::int AS communities,
+      COUNT(*) FILTER (
+        WHERE sl.created_at >= mb.curr_start AND sl.created_at <= mb.curr_end
+      )::int AS current_month_listings,
+      COUNT(*) FILTER (
+        WHERE sl.created_at >= mb.prev_start AND sl.created_at <= mb.prev_end
+      )::int AS previous_month_listings,
+      COUNT(*) FILTER (
+        WHERE sl.created_at >= mb.curr_start
+          AND sl.created_at <= mb.curr_end
+          AND sl.listing_type = ${ListingType.RENT}
+      )::int AS current_month_rentals,
+      COUNT(*) FILTER (
+        WHERE sl.created_at >= mb.prev_start
+          AND sl.created_at <= mb.prev_end
+          AND sl.listing_type = ${ListingType.RENT}
+      )::int AS previous_month_rentals,
+      COUNT(*) FILTER (
+        WHERE sl.created_at >= mb.curr_start
+          AND sl.created_at <= mb.curr_end
+          AND sl.listing_type = ${ListingType.SALE}
+      )::int AS current_month_sales,
+      COUNT(*) FILTER (
+        WHERE sl.created_at >= mb.prev_start
+          AND sl.created_at <= mb.prev_end
+          AND sl.listing_type = ${ListingType.SALE}
+      )::int AS previous_month_sales,
+      COUNT(DISTINCT sl.community_id) FILTER (
+        WHERE sl.created_at >= mb.curr_start AND sl.created_at <= mb.curr_end
+      )::int AS current_month_communities,
+      COUNT(DISTINCT sl.community_id) FILTER (
+        WHERE sl.created_at >= mb.prev_start AND sl.created_at <= mb.prev_end
+      )::int AS previous_month_communities
+    FROM scoped_listings sl
+    CROSS JOIN month_bounds mb
+  `);
 
-function listingCreatedInMonthWhere(
-  monthsAgo: number,
-  scope: DashboardQueryScope,
-  listingFilter: Prisma.ListingWhereInput = {}
-): Prisma.ListingWhereInput {
-  const { start, end } = monthBounds(monthsAgo);
-
-  return listingScopeWhere(scope, {
-    ...listingFilter,
-    createdAt: {
-      gte: start,
-      lte: end,
-    },
-  });
-}
-
-function propertyWithListingCreatedInMonthWhere(
-  monthsAgo: number,
-  scope: DashboardQueryScope,
-  listingFilter: Prisma.ListingWhereInput = {}
-): Prisma.PropertyWhereInput {
-  return {
-    deletedAt: null,
-    listings: {
-      some: listingCreatedInMonthWhere(monthsAgo, scope, listingFilter),
-    },
-  };
+  return mapDashboardMetricsRow(rows[0]);
 }
 
 export async function fetchDashboardMetrics(
   scope: DashboardQueryScope
 ): Promise<DashboardMetrics> {
-  return rscTry("dashboard.repository:fetchDashboardMetrics", async () => {
-  const activeListings = await prisma.property.count({
-    where: propertyWithListingWhere(scope, { status: ListingStatus.ACTIVE }),
-  });
-
-  const rentals = await prisma.property.count({
-    where: propertyWithListingWhere(scope, { listingType: ListingType.RENT }),
-  });
-
-  const sales = await prisma.property.count({
-    where: propertyWithListingWhere(scope, { listingType: ListingType.SALE }),
-  });
-
-  const activeCommunityRows = await prisma.property.findMany({
-    where: propertyWithListingWhere(scope, { status: ListingStatus.ACTIVE }),
-    select: { communityId: true },
-    distinct: ["communityId"],
-  });
-
-  const currentMonthListingsAgg = await prisma.listing.aggregate({
-    where: listingCreatedInMonthWhere(0, scope),
-    _count: { _all: true },
-  });
-
-  const previousMonthListingsAgg = await prisma.listing.aggregate({
-    where: listingCreatedInMonthWhere(1, scope),
-    _count: { _all: true },
-  });
-
-  const currentMonthRentalsAgg = await prisma.listing.aggregate({
-    where: listingCreatedInMonthWhere(0, scope, {
-      listingType: ListingType.RENT,
-    }),
-    _count: { _all: true },
-  });
-
-  const previousMonthRentalsAgg = await prisma.listing.aggregate({
-    where: listingCreatedInMonthWhere(1, scope, {
-      listingType: ListingType.RENT,
-    }),
-    _count: { _all: true },
-  });
-
-  const currentMonthSalesAgg = await prisma.listing.aggregate({
-    where: listingCreatedInMonthWhere(0, scope, {
-      listingType: ListingType.SALE,
-    }),
-    _count: { _all: true },
-  });
-
-  const previousMonthSalesAgg = await prisma.listing.aggregate({
-    where: listingCreatedInMonthWhere(1, scope, {
-      listingType: ListingType.SALE,
-    }),
-    _count: { _all: true },
-  });
-
-  const currentMonthCommunityRows = await prisma.property.findMany({
-    where: propertyWithListingCreatedInMonthWhere(0, scope),
-    select: { communityId: true },
-    distinct: ["communityId"],
-  });
-
-  const previousMonthCommunityRows = await prisma.property.findMany({
-    where: propertyWithListingCreatedInMonthWhere(1, scope),
-    select: { communityId: true },
-    distinct: ["communityId"],
-  });
-
-  return {
-    activeListings,
-    rentals,
-    sales,
-    communities: activeCommunityRows.length,
-    currentMonthListings: currentMonthListingsAgg._count._all,
-    previousMonthListings: previousMonthListingsAgg._count._all,
-    currentMonthRentals: currentMonthRentalsAgg._count._all,
-    previousMonthRentals: previousMonthRentalsAgg._count._all,
-    currentMonthSales: currentMonthSalesAgg._count._all,
-    previousMonthSales: previousMonthSalesAgg._count._all,
-    currentMonthCommunities: currentMonthCommunityRows.length,
-    previousMonthCommunities: previousMonthCommunityRows.length,
-  };
+  return rscTry("fetchDashboardMetrics", async () => {
+    const scopeKey = scope.agentId ?? "global";
+    return cacheDashboardMetrics(scopeKey, () => queryDashboardMetrics(scope));
   });
 }

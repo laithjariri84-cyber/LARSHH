@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { perfAsync } from "@/lib/perf/timer";
+
 import type { SupabaseCookie } from "./types";
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -28,7 +30,9 @@ export async function updateSession(request: NextRequest) {
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await perfAsync("middleware supabase.auth.getUser", () =>
+    supabase.auth.getUser()
+  );
 
   const { pathname } = request.nextUrl;
   const isAuthRoute = pathname.startsWith("/login");
@@ -44,7 +48,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthRoute) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/search";
+    redirectUrl.pathname = "/dashboard";
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }

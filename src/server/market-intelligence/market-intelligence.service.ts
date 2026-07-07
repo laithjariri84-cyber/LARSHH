@@ -115,7 +115,7 @@ function formatDifferenceLabel(differencePercent: number | null): string | null 
 export async function computePropertyMarketIntelligence(
   input: ComputeInput
 ): Promise<PropertyMarketIntelligence | null> {
-  return rscTry("market-intelligence.service:computePropertyMarketIntelligence", async () => {
+  return rscTry("computePropertyMarketIntelligence", async () => {
   const communitySlug = resolveCommunitySlug(input.communityName);
   if (!communitySlug) return null;
   const bedroomCount = normalizeBedroomCount(input.bedrooms);

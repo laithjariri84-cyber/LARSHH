@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { ListingStatus, ListingType } from "@prisma/client";
 
-import type { PropertyDetailsRecord } from "@/lib/repositories/property.repository";
+import type { PropertyDetailsRecord, SimilarPropertyRecord } from "@/lib/repositories/property.repository";
 import { getAgentDisplayName } from "@/lib/repositories/property.repository";
 import { formatCurrency, formatLabel } from "@/lib/utils";
 
@@ -101,22 +101,14 @@ function buildTimeline(property: PropertyDetailsRecord): PropertyTimelineEvent[]
   );
 }
 
-function mapSimilarProperty(
-  property: Prisma.PropertyGetPayload<{
-    include: {
-      community: true;
-      building: { include: { community: true } };
-      listings: true;
-    };
-  }>
-): SimilarPropertySummary {
+function mapSimilarProperty(property: SimilarPropertyRecord): SimilarPropertySummary {
   const rent = property.listings.find((l) => l.listingType === ListingType.RENT);
   const sale = property.listings.find((l) => l.listingType === ListingType.SALE);
   const primary = property.listings[0] ?? null;
 
   return {
     propertyId: property.id,
-    community: property.community?.name ?? property.building?.community?.name ?? "Unknown",
+    community: property.community?.name ?? "Unknown",
     building: property.building.name,
     unitNumber: property.unitNumber,
     propertyType: property.propertyType,

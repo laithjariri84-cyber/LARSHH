@@ -17,6 +17,7 @@ export {
 export {
   findMarketProfile,
   listMarketProfiles,
+  listMarketProfilesByCommunitySlug,
   updateMarketProfile,
 } from "./market-intelligence.repository";
 export { computePropertyMarketIntelligence } from "./market-intelligence.service";

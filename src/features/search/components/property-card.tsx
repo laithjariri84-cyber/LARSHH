@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import {
   Bath,
   Bed,
@@ -16,6 +16,7 @@ import { ListingStatus } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { OptimizedListingImage } from "@/components/ui/optimized-listing-image";
 import type { PropertySearchResult } from "@/features/search/types";
 import { notify } from "@/lib/notifications";
 import { getPropertyCardImage } from "@/lib/property-placeholder-image";
@@ -55,7 +56,7 @@ function getPrimaryPrice(property: PropertySearchResult): string {
   return "Price on request";
 }
 
-export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
+export const PropertyCard = memo(function PropertyCard({ property, index = 0 }: PropertyCardProps) {
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const coverImage = getPropertyCardImage(property.propertyId);
@@ -110,12 +111,11 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
         style={{ animationDelay: `${index * 50}ms` }}
       >
         <div className="relative aspect-[4/3] overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <OptimizedListingImage
             src={coverImage}
             alt={title}
-            loading="lazy"
-            className="size-full object-cover transition-transform duration-700 group-hover:scale-105"
+            priority={index < 2}
+            className="transition-transform duration-700 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
@@ -236,4 +236,4 @@ export function PropertyCard({ property, index = 0 }: PropertyCardProps) {
       />
     </>
   );
-}
+});

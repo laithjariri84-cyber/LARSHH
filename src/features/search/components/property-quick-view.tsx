@@ -6,6 +6,7 @@ import { ListingStatus } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { OptimizedListingImage } from "@/components/ui/optimized-listing-image";
 import {
   Sheet,
   SheetContent,
@@ -50,13 +51,7 @@ export function PropertyQuickView({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-lg">
         <div className="relative aspect-[16/10] overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={coverImage}
-            alt={title}
-            loading="lazy"
-            className="size-full object-cover"
-          />
+          <OptimizedListingImage src={coverImage} alt={title} />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent" />
           {property.status ? (
             <Badge

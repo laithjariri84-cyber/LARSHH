@@ -2,30 +2,59 @@ import type { ListingType, Prisma, PropertyType } from "@prisma/client";
 import { ListingStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
+import { cacheBuildings, cacheCommunities } from "@/lib/server-cache";
 
 import type { SearchFiltersInput } from "@/features/search/schemas/search-filters.schema";
 import { rscTry } from "@/lib/rsc-debug";
 
-const listingAgentInclude = {
+const listingAgentSelect = {
+  agent: { select: { user: { select: { fullName: true } } } },
+} satisfies Prisma.ListingSelect;
+
+const listingAgentDetailsInclude = {
   agent: { include: { user: true } },
 } satisfies Prisma.ListingInclude;
 
-export const propertySearchInclude = {
-  community: true,
-  building: { include: { community: true } },
+const propertySearchListingSelect = {
+  listingType: true,
+  status: true,
+  askingPrice: true,
+  pricePerSqft: true,
+  currency: true,
+  updatedAt: true,
+  agent: listingAgentSelect.agent,
+} satisfies Prisma.ListingSelect;
+
+/** Columns required by search mapper — avoids loading unused property/listing fields. */
+export const propertySearchSelect = {
+  id: true,
+  propertyCode: true,
+  unitNumber: true,
+  bedrooms: true,
+  bathrooms: true,
+  areaSqft: true,
+  view: true,
+  furnishing: true,
+  propertyType: true,
+  updatedAt: true,
+  community: { select: { id: true, name: true } },
+  building: { select: { id: true, name: true } },
   listings: {
-    include: listingAgentInclude,
+    select: propertySearchListingSelect,
     where: { deletedAt: null },
     orderBy: { updatedAt: "desc" as const },
   },
-} satisfies Prisma.PropertyInclude;
+} satisfies Prisma.PropertySelect;
+
+/** @deprecated Use propertySearchSelect — kept for re-exports during migration. */
+export const propertySearchInclude = propertySearchSelect;
 
 export const propertyDetailsInclude = {
   masterCommunity: true,
   community: true,
   building: { include: { community: true } },
   listings: {
-    include: listingAgentInclude,
+    include: listingAgentDetailsInclude,
     where: { deletedAt: null },
     orderBy: { updatedAt: "desc" as const },
   },
@@ -48,9 +77,16 @@ export const propertyDetailsInclude = {
 } satisfies Prisma.PropertyInclude;
 
 export const similarPropertyInclude = {
-  community: true,
-  building: { include: { community: true } },
+  community: { select: { id: true, name: true } },
+  building: { select: { id: true, name: true } },
   listings: {
+    select: {
+      listingType: true,
+      status: true,
+      askingPrice: true,
+      currency: true,
+      updatedAt: true,
+    },
     where: { deletedAt: null },
     orderBy: { updatedAt: "desc" as const },
     take: 2,
@@ -58,7 +94,7 @@ export const similarPropertyInclude = {
 } satisfies Prisma.PropertyInclude;
 
 export type PropertySearchRecord = Prisma.PropertyGetPayload<{
-  include: typeof propertySearchInclude;
+  select: typeof propertySearchSelect;
 }>;
 
 export type PropertyDetailsRecord = Prisma.PropertyGetPayload<{
@@ -130,11 +166,15 @@ function buildSearchWhere(filters: SearchFiltersInput): Prisma.PropertyWhereInpu
   };
 }
 
+const propertySearchQuery = {
+  select: propertySearchSelect,
+  orderBy: { updatedAt: "desc" as const },
+} as const;
+
 export async function getAllProperties(): Promise<PropertySearchRecord[]> {
   return prisma.property.findMany({
     where: { deletedAt: null },
-    include: propertySearchInclude,
-    orderBy: { updatedAt: "desc" },
+    ...propertySearchQuery,
   });
 }
 
@@ -143,8 +183,7 @@ export async function searchProperties(
 ): Promise<PropertySearchRecord[]> {
   return prisma.property.findMany({
     where: buildSearchWhere(filters),
-    include: propertySearchInclude,
-    orderBy: { updatedAt: "desc" },
+    ...propertySearchQuery,
   });
 }
 
@@ -215,42 +254,42 @@ export async function getSimilarProperties({
 }
 
 export async function getCommunityOptions() {
-  return prisma.community.findMany({
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
+  return cacheCommunities(() =>
+    prisma.community.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    })
+  );
 }
 
 export async function getBuildingOptions(communityId?: string) {
-  return prisma.building.findMany({
-    where: communityId ? { communityId } : undefined,
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
+  return cacheBuildings(communityId, () =>
+    prisma.building.findMany({
+      where: communityId ? { communityId } : undefined,
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    })
+  );
+}
+
+export async function querySearchProperties(
+  filters: SearchFiltersInput = {}
+): Promise<PropertySearchRecord[]> {
+  return prisma.property.findMany({
+    where: buildSearchWhere(filters),
+    ...propertySearchQuery,
   });
 }
 
 export async function fetchSearchPageData(filters: SearchFiltersInput = {}) {
-  return rscTry("property.repository:fetchSearchPageData", async () => {
-  const where = buildSearchWhere(filters);
+  return rscTry("fetchSearchPageData.repository", async () => {
+    const [properties, communities, buildings] = await Promise.all([
+      querySearchProperties(filters),
+      getCommunityOptions(),
+      getBuildingOptions(filters.communityId),
+    ]);
 
-  const [properties, communities, buildings] = await prisma.$transaction([
-    prisma.property.findMany({
-      where,
-      include: propertySearchInclude,
-      orderBy: { updatedAt: "desc" },
-    }),
-    prisma.community.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.building.findMany({
-      where: filters.communityId ? { communityId: filters.communityId } : undefined,
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
-
-  return { properties, communities, buildings };
+    return { properties, communities, buildings };
   });
 }
 

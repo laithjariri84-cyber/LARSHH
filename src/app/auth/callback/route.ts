@@ -7,7 +7,10 @@ export async function GET(request: Request) {
   try {
     const { searchParams, origin } = new URL(request.url);
     const code = searchParams.get("code");
-    const next = searchParams.get("next") ?? "/search";
+    const next =
+      searchParams.get("next") ??
+      searchParams.get("redirectTo") ??
+      "/dashboard";
 
     if (code) {
       const result = await rscTry("auth/callback:exchangeCodeForSession", async () => {

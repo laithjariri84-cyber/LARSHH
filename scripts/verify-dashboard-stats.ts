@@ -11,21 +11,15 @@ async function main() {
 
   const allProperties = await searchProperties({});
   const rentalsFromSearch = allProperties.filter((property) =>
-    property.listings.some(
-      (listing) =>
-        listing.deletedAt === null && listing.listingType === ListingType.RENT
-    )
+    property.listings.some((listing) => listing.listingType === ListingType.RENT)
   ).length;
 
   const salesFromSearch = allProperties.filter((property) =>
-    property.listings.some(
-      (listing) =>
-        listing.deletedAt === null && listing.listingType === ListingType.SALE
-    )
+    property.listings.some((listing) => listing.listingType === ListingType.SALE)
   ).length;
 
   const communitiesFromSearch = new Set(
-    activeProperties.map((property) => property.communityId)
+    activeProperties.map((property) => property.community.id)
   ).size;
 
   console.log("Dashboard statistics verification");

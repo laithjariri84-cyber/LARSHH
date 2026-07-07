@@ -2,6 +2,7 @@ import { getUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { rscTry } from "@/lib/rsc-debug";
 import { isUiOnlyMode } from "@/lib/ui-only";
+import { cache } from "react";
 
 import { fetchDashboardMetrics } from "./dashboard.repository";
 import type {
@@ -32,6 +33,14 @@ function formatGrowthPercent(
   };
 }
 
+const resolveAgentId = cache(async (userId: string): Promise<string | null> => {
+  const agent = await prisma.agent.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+  return agent?.id ?? null;
+});
+
 async function resolveDashboardScope(): Promise<DashboardQueryScope> {
   return rscTry("dashboard.service:resolveDashboardScope", async () => {
     if (isUiOnlyMode()) {
@@ -43,21 +52,17 @@ async function resolveDashboardScope(): Promise<DashboardQueryScope> {
       return {};
     }
 
-    const agent = await prisma.agent.findUnique({
-      where: { userId: user.id },
-      select: { id: true },
-    });
-
-    if (!agent) {
+    const agentId = await resolveAgentId(user.id);
+    if (!agentId) {
       return {};
     }
 
-    return { agentId: agent.id };
+    return { agentId };
   });
 }
 
 export async function getDashboardStatistics(): Promise<DashboardStat[]> {
-  return rscTry("dashboard.service:getDashboardStatistics", async () => {
+  return rscTry("getDashboardStatistics", async () => {
     const scope = await resolveDashboardScope();
     const metrics = await fetchDashboardMetrics(scope);
 

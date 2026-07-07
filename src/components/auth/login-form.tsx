@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") ?? "/search";
+  const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,14 +43,14 @@ export function LoginForm() {
   }
 
   return (
-    <div className="larssh-card mx-auto flex w-full max-w-sm flex-col gap-8 rounded-2xl p-8 shadow-2xl shadow-black/50">
+    <div className="larssh-card mx-auto flex w-full max-w-sm flex-col gap-8 rounded-2xl p-8 shadow-2xl shadow-black/10 dark:shadow-black/50">
       <div className="flex flex-col items-center gap-3 text-center">
         <Logo size="lg" />
         <div>
           <p className="text-gold text-xs font-medium tracking-[0.22em] uppercase">
             {LARSSH_BRAND.name}
           </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white">
+          <h1 className="text-foreground mt-2 text-2xl font-semibold tracking-tight">
             Welcome back
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
@@ -70,7 +70,7 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}
-            className="border-white/10 bg-background/60"
+            className="border-input bg-background/60"
           />
         </div>
         <div className="space-y-2">
@@ -83,7 +83,7 @@ export function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={isLoading}
-            className="border-white/10 bg-background/60"
+            className="border-input bg-background/60"
           />
         </div>
         {error ? <p className="text-destructive text-sm">{error}</p> : null}

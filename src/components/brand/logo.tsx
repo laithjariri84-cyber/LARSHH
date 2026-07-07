@@ -65,7 +65,7 @@ export function Logo({ size = "sm", showWordmark = false, className }: LogoProps
       </div>
       {showWordmark ? (
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold tracking-[0.14em] text-white uppercase">
+          <p className="text-foreground truncate text-sm font-semibold tracking-[0.14em] uppercase">
             {LARSSH_BRAND.name}
           </p>
           <p className="text-muted-foreground truncate text-[11px]">

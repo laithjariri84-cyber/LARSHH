@@ -15,8 +15,11 @@ import {
 import { applySmartSearchResults } from "@/features/search/smart-search/apply-smart-search-sort";
 import { SmartSearchBar } from "@/features/search/smart-search/smart-search-bar";
 import { logRscError, rscTry, rscTrySync } from "@/lib/rsc-debug";
+import { perfAsync } from "@/lib/perf/timer";
 
 export const metadata: Metadata = { title: "Search Listings" };
+
+/** Filtered by URL params — must render per request. */
 export const dynamic = "force-dynamic";
 
 type SearchPageProps = {
@@ -69,30 +72,31 @@ function parseSearchParams(
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  try {
-    const params = await searchParams;
-    const { filters, smartMeta, detectedKeys, hasFilters } =
-      parseSearchParams(params);
+  return perfAsync("Search render", async () => {
+    try {
+      const params = await searchParams;
+      const { filters, smartMeta, detectedKeys, hasFilters } =
+        parseSearchParams(params);
 
-    const { results: rawResults, communities, buildings } = await rscTry(
-      "search/page:loadSearchPageData",
-      () => loadSearchPageData(filters)
-    );
+      const { results: rawResults, communities, buildings } = await rscTry(
+        "loadSearchPageData",
+        () => loadSearchPageData(filters)
+      );
 
-    const enrichedResults = await rscTry(
-      "search/page:enrichSearchResultsWithMarketIntelligence",
-      () => enrichSearchResultsWithMarketIntelligence(rawResults)
-    );
+      const enrichedResults = await rscTry(
+        "enrichSearchResultsWithMarketIntelligence",
+        () => enrichSearchResultsWithMarketIntelligence(rawResults)
+      );
 
-    const results = rscTrySync("search/page:applySmartSearchResults", () =>
-      applySmartSearchResults(enrichedResults, {
-        sort: smartMeta.sort,
-        filters,
-        smartQuery: smartMeta.smartQuery,
-      })
-    );
+      const results = rscTrySync("applySmartSearchResults", () =>
+        applySmartSearchResults(enrichedResults, {
+          sort: smartMeta.sort,
+          filters,
+          smartQuery: smartMeta.smartQuery,
+        })
+      );
 
-    return (
+      return (
       <div className="larssh-page space-y-6">
         <div>
           <p className="text-gold text-sm font-medium tracking-wide uppercase">
@@ -136,7 +140,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         </section>
       </div>
     );
-  } catch (error) {
-    logRscError("search/page:render", error);
-  }
+    } catch (error) {
+      logRscError("search/page:render", error);
+    }
+  });
 }

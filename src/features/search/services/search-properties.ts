@@ -7,6 +7,7 @@ import {
   getPropertyById as getPropertyByIdFromDb,
 } from "@/lib/repositories/property.repository";
 import { rscTry } from "@/lib/rsc-debug";
+import { perfSync } from "@/lib/perf/timer";
 
 import type { SearchFiltersInput } from "../schemas/search-filters.schema";
 import type { FilterOption } from "../types";
@@ -38,12 +39,14 @@ export async function searchProperties(filters: SearchFiltersInput = {}) {
 }
 
 export async function loadSearchPageData(filters: SearchFiltersInput = {}) {
-  return rscTry("search-properties:loadSearchPageData", async () => {
+  return rscTry("fetchSearchPageData", async () => {
     const { properties, communities, buildings } =
       await fetchSearchPageData(filters);
 
     return {
-      results: mapSearchResultsSafely(properties),
+      results: perfSync("mapPropertiesToSearchResults", () =>
+        mapSearchResultsSafely(properties)
+      ),
       communities: communities.map((c) => ({ value: c.id, label: c.name })),
       buildings: buildings.map((b) => ({ value: b.id, label: b.name })),
     };

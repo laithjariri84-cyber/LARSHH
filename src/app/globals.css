@@ -39,6 +39,35 @@
 
 :root {
   --radius: 0.75rem;
+  --gold: #c9a227;
+  --gold-muted: rgba(201, 162, 39, 0.14);
+  --gold-foreground: #0a0a0b;
+  --background: #f8f8fa;
+  --foreground: #111113;
+  --card: #ffffff;
+  --card-foreground: #111113;
+  --popover: #ffffff;
+  --popover-foreground: #111113;
+  --primary: #c9a227;
+  --primary-foreground: #0a0a0b;
+  --secondary: #f1f1f4;
+  --secondary-foreground: #111113;
+  --muted: #ececf0;
+  --muted-foreground: #63636e;
+  --accent: rgba(201, 162, 39, 0.12);
+  --accent-foreground: #6b5410;
+  --destructive: #dc2626;
+  --border: rgba(17, 17, 19, 0.1);
+  --input: rgba(17, 17, 19, 0.08);
+  --ring: rgba(201, 162, 39, 0.45);
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111113;
+  --sidebar-accent: rgba(201, 162, 39, 0.1);
+  --sidebar-accent-foreground: #6b5410;
+  --sidebar-border: rgba(17, 17, 19, 0.08);
+}
+
+.dark {
   --gold: #d4af37;
   --gold-muted: rgba(212, 175, 55, 0.12);
   --gold-foreground: #0a0a0b;
@@ -79,6 +108,12 @@
   body {
     @apply bg-background text-foreground antialiased;
     background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(201, 162, 39, 0.08), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 0%, rgba(201, 162, 39, 0.04), transparent);
+  }
+
+  .dark body {
+    background-image:
       radial-gradient(ellipse 80% 50% at 50% -20%, rgba(212, 175, 55, 0.08), transparent),
       radial-gradient(ellipse 60% 40% at 100% 0%, rgba(212, 175, 55, 0.04), transparent);
   }
@@ -87,6 +122,12 @@
 @layer utilities {
   .paragon-card {
     @apply bg-card/80 border backdrop-blur-sm;
+    box-shadow:
+      0 0 0 1px rgba(17, 17, 19, 0.04) inset,
+      0 1px 2px rgba(17, 17, 19, 0.06);
+  }
+
+  .dark .paragon-card {
     box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.03) inset,
       0 1px 2px rgba(0, 0, 0, 0.4);
@@ -99,12 +140,23 @@
   .larssh-card {
     @apply bg-card/70 border backdrop-blur-md;
     box-shadow:
+      0 0 0 1px rgba(17, 17, 19, 0.04) inset,
+      0 8px 32px rgba(17, 17, 19, 0.08);
+  }
+
+  .dark .larssh-card {
+    box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.04) inset,
       0 8px 32px rgba(0, 0, 0, 0.45);
   }
 
   .larssh-glass {
-    @apply border border-white/10 bg-black/40 backdrop-blur-md;
+    @apply border border-border bg-card/60 backdrop-blur-md;
+    box-shadow: 0 4px 24px rgba(17, 17, 19, 0.08);
+  }
+
+  .dark .larssh-glass {
+    @apply bg-black/40;
     box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
   }
 
@@ -194,18 +246,34 @@
     background: linear-gradient(
       90deg,
       transparent,
-      rgba(255, 255, 255, 0.06),
+      rgba(17, 17, 19, 0.06),
       transparent
     );
     animation: skeletonShimmer 1.5s infinite;
   }
 
+  .dark .larssh-skeleton::after {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.06),
+      transparent
+    );
+  }
+
   .intelligence-terminal {
+    background-color: rgba(248, 248, 250, 0.92);
+    background-image:
+      linear-gradient(rgba(201, 162, 39, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201, 162, 39, 0.05) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .dark .intelligence-terminal {
     background-color: rgba(9, 9, 11, 0.92);
     background-image:
       linear-gradient(rgba(212, 175, 55, 0.04) 1px, transparent 1px),
       linear-gradient(90deg, rgba(212, 175, 55, 0.04) 1px, transparent 1px);
-    background-size: 28px 28px;
   }
 
   .intelligence-ticker {

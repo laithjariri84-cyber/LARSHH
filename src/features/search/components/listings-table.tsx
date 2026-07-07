@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { memo } from "react";
 import { ListingStatus } from "@prisma/client";
 
 import { Badge } from "@/components/ui/badge";
@@ -77,7 +78,7 @@ export function ListingsTable({ rows }: ListingsTableProps) {
   );
 }
 
-function ListingTableRow({ row }: { row: PropertySearchResult }) {
+function ListingTableRowComponent({ row }: { row: PropertySearchResult }) {
   const router = useRouter();
 
   return (
@@ -120,3 +121,5 @@ function ListingTableRow({ row }: { row: PropertySearchResult }) {
     </TableRow>
   );
 }
+
+const ListingTableRow = memo(ListingTableRowComponent);
