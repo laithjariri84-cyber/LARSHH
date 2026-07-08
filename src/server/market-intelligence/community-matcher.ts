@@ -4,6 +4,12 @@ const COMMUNITY_SLUG_MATCHERS: Array<{ pattern: string; slug: string }> = [
   { pattern: "pacific", slug: "pacific" },
   { pattern: "mina al arab", slug: "mina-al-arab-lagoon" },
   { pattern: "marina residences", slug: "marina-residences" },
+  { pattern: "bay residences", slug: "bay-residences" },
+  { pattern: "gateway residences", slug: "gateway-residences" },
+  { pattern: "bermuda", slug: "bermuda" },
+  { pattern: "malibu", slug: "malibu" },
+  { pattern: "marbella", slug: "marbella" },
+  { pattern: "flamingo", slug: "flamingo" },
   { pattern: "golf apartments", slug: "golf-apartments" },
   { pattern: "golf terrace", slug: "golf-terrace" },
   { pattern: "bayti homes", slug: "bayti-homes" },
@@ -28,14 +34,17 @@ export function normalizeBedroomCount(bedrooms: number | null | undefined): numb
     return 0;
   }
 
-  return Math.min(Math.max(Math.round(bedrooms), 0), 3);
+  return Math.min(Math.max(Math.round(bedrooms), 0), 5);
 }
 
 export function bedroomLabel(count: number): string {
   if (count <= 0) return "Studio";
   if (count === 1) return "1 Bedroom";
   if (count === 2) return "2 Bedroom";
-  return "3 Bedroom";
+  if (count === 3) return "3 Bedroom";
+  if (count === 4) return "4 Bedroom";
+  if (count === 5) return "5 Bedroom";
+  return "3+ Bedroom";
 }
 
 export const MARKET_INTELLIGENCE_COMMUNITIES = [
@@ -44,6 +53,12 @@ export const MARKET_INTELLIGENCE_COMMUNITIES = [
   { slug: "bab-al-bahr", name: "Bab Al Bahr" },
   { slug: "mina-al-arab-lagoon", name: "Mina Al Arab Lagoon" },
   { slug: "marina-residences", name: "Marina Residences" },
+  { slug: "bay-residences", name: "Bay Residences" },
+  { slug: "gateway-residences", name: "Gateway Residences" },
+  { slug: "bermuda", name: "Bermuda" },
+  { slug: "malibu", name: "Malibu" },
+  { slug: "marbella", name: "Marbella" },
+  { slug: "flamingo", name: "Flamingo" },
   { slug: "golf-apartments", name: "Golf Apartments" },
   { slug: "golf-terrace", name: "Golf Terrace" },
   { slug: "bayti-homes", name: "Bayti Homes" },

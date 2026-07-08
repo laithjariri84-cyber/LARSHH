@@ -14,8 +14,8 @@ import { Logo } from "@/components/brand/logo";
 import { Input } from "@/components/ui/input";
 import { LARSSH_BRAND } from "@/lib/brand";
 import {
+  filterSidebarNavGroups,
   isNavItemActive,
-  sidebarNavGroups,
   type SidebarNavGroup,
   type SidebarNavItem,
 } from "@/lib/navigation/sidebar-nav";
@@ -27,6 +27,7 @@ const DEFAULT_EXPANDED: Record<string, boolean> = {
   properties: true,
   crm: true,
   analytics: false,
+  admin: false,
   administration: false,
 };
 
@@ -35,6 +36,7 @@ type ParagonSidebarProps = {
   onToggle: () => void;
   onNavigate?: () => void;
   isMobileDrawer?: boolean;
+  showMiAdmin?: boolean;
 };
 
 function readExpandedGroups(): Record<string, boolean> {
@@ -48,11 +50,12 @@ function readExpandedGroups(): Record<string, boolean> {
   }
 }
 
-function filterGroups(query: string): SidebarNavGroup[] {
+function filterGroups(query: string, showMiAdmin: boolean): SidebarNavGroup[] {
+  const groups = filterSidebarNavGroups(showMiAdmin);
   const normalized = query.trim().toLowerCase();
-  if (!normalized) return sidebarNavGroups;
+  if (!normalized) return groups;
 
-  return sidebarNavGroups
+  return groups
     .map((group) => ({
       ...group,
       items: group.items.filter(
@@ -114,6 +117,7 @@ export function ParagonSidebar({
   onToggle,
   onNavigate,
   isMobileDrawer = false,
+  showMiAdmin = false,
 }: ParagonSidebarProps) {
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
@@ -126,13 +130,13 @@ export function ParagonSidebar({
   }, []);
 
   const filteredGroups = useMemo(
-    () => filterGroups(searchQuery),
-    [searchQuery]
+    () => filterGroups(searchQuery, showMiAdmin),
+    [searchQuery, showMiAdmin]
   );
 
   const flatItems = useMemo(
-    () => sidebarNavGroups.flatMap((group) => group.items),
-    []
+    () => filterSidebarNavGroups(showMiAdmin).flatMap((group) => group.items),
+    [showMiAdmin]
   );
 
   function toggleGroup(groupId: string) {

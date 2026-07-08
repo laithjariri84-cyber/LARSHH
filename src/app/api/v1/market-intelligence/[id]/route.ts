@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { requireMarketIntelligenceAdmin } from "@/lib/market-intelligence-admin-auth";
+import { CACHE_TAGS } from "@/lib/server-cache";
 import { updateMarketProfile } from "@/server/market-intelligence";
+import { revalidateTag } from "next/cache";
 
 const updateSchema = z.object({
   rentFurnishedMin: z.number().nullable().optional(),
@@ -34,6 +37,12 @@ type RouteContext = {
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
+  try {
+    await requireMarketIntelligenceAdmin();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const { id } = await context.params;
   const body = await request.json();
   const parsed = updateSchema.safeParse(body);
@@ -46,5 +55,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const profile = await updateMarketProfile(id, parsed.data);
+  revalidateTag(CACHE_TAGS.marketProfiles);
+  revalidateTag(CACHE_TAGS.marketRoiProfiles);
+  revalidateTag(CACHE_TAGS.communityIntelligenceCms);
+
   return NextResponse.json({ data: profile });
 }

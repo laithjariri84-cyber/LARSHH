@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireMarketIntelligenceAdmin } from "@/lib/market-intelligence-admin-auth";
-import { listMarketProfiles } from "@/server/market-intelligence";
+import { listCommunitiesForCms } from "@/server/market-intelligence/cms";
 
 export async function GET() {
   try {
@@ -10,6 +10,6 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const profiles = await listMarketProfiles();
-  return NextResponse.json({ data: profiles });
+  const communities = await listCommunitiesForCms();
+  return NextResponse.json({ data: communities });
 }

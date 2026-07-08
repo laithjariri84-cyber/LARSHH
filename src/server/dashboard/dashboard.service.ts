@@ -58,10 +58,21 @@ async function resolveDashboardScope(): Promise<DashboardQueryScope> {
   return { agentId };
 }
 
-export async function getDashboardStatistics(): Promise<DashboardStat[]> {
-  const scope = await resolveDashboardScope();
-  const metrics = await fetchDashboardMetrics(scope);
+const UI_ONLY_DASHBOARD_STATS: DashboardStat[] = [
+  { label: "Active Listings", value: "248", change: "+12%", trend: "up" },
+  { label: "Rentals", value: "156", change: "+8%", trend: "up" },
+  { label: "Sales", value: "92", change: "+4%", trend: "up" },
+  { label: "Communities", value: "24", change: "0%", trend: "neutral" },
+];
 
+const EMPTY_DASHBOARD_STATS: DashboardStat[] = [
+  { label: "Active Listings", value: "0", change: "—", trend: "neutral" },
+  { label: "Rentals", value: "0", change: "—", trend: "neutral" },
+  { label: "Sales", value: "0", change: "—", trend: "neutral" },
+  { label: "Communities", value: "0", change: "—", trend: "neutral" },
+];
+
+function buildDashboardStats(metrics: Awaited<ReturnType<typeof fetchDashboardMetrics>>): DashboardStat[] {
   const activeGrowth = formatGrowthPercent(
     metrics.currentMonthListings,
     metrics.previousMonthListings
@@ -105,4 +116,19 @@ export async function getDashboardStatistics(): Promise<DashboardStat[]> {
       trend: communityGrowth.trend,
     },
   ];
+}
+
+export async function getDashboardStatistics(): Promise<DashboardStat[]> {
+  if (isUiOnlyMode()) {
+    return UI_ONLY_DASHBOARD_STATS;
+  }
+
+  try {
+    const scope = await resolveDashboardScope();
+    const metrics = await fetchDashboardMetrics(scope);
+    return buildDashboardStats(metrics);
+  } catch (error) {
+    console.error("[dashboard] getDashboardStatistics:", error);
+    return EMPTY_DASHBOARD_STATS;
+  }
 }

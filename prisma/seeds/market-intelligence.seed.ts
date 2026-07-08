@@ -50,6 +50,38 @@ function avg(min?: number, max?: number, explicit?: number) {
   return min ?? max;
 }
 
+const VERIFIED_STATUS_NOTE =
+  "Research status: Verified (founder, Sprint 6). Currency: AED.";
+
+const PENDING_STATUS_NOTE =
+  "Research status: Pending Research.";
+
+/** Founder-verified profile — no derived sold prices, ROI, or averages. */
+export function verifiedProfile(
+  input: Omit<
+    MarketProfileSeed,
+    | "saleSoldLowest"
+    | "saleSoldAvg"
+    | "saleSoldHighest"
+    | "saleSoldEstimated"
+    | "estimatedRoiPercent"
+    | "isEstimated"
+  >
+): MarketProfileSeed {
+  return {
+    ...input,
+    rentFurnishedEstimated: false,
+    rentUnfurnishedEstimated: false,
+    saleAskingEstimated: false,
+    saleSoldEstimated: false,
+    isEstimated: false,
+    confidencePercent: input.confidencePercent ?? 100,
+    notes: input.notes
+      ? `${input.notes}\n\n${VERIFIED_STATUS_NOTE}`
+      : VERIFIED_STATUS_NOTE,
+  };
+}
+
 function profile(
   input: Omit<
     MarketProfileSeed,
@@ -457,17 +489,166 @@ const MINA_AL_ARAB: MarketProfileSeed[] = [
   }),
 ];
 
+const MARINA_RESIDENCES: MarketProfileSeed[] = [
+  verifiedProfile({
+    communitySlug: "marina-residences",
+    communityName: "Marina Residences",
+    bedroomCount: 0,
+    rentFurnishedMin: 28000,
+    rentFurnishedMax: 32000,
+    rentUnfurnishedMin: 27000,
+    rentUnfurnishedMax: 30000,
+    saleAskingLowest: 435000,
+    saleAskingHighest: 460000,
+    notes: "Studio rent size 505–580 sqft.",
+  }),
+  verifiedProfile({
+    communitySlug: "marina-residences",
+    communityName: "Marina Residences",
+    bedroomCount: 1,
+    rentFurnishedMin: 50000,
+    rentFurnishedMax: 57000,
+    rentUnfurnishedMin: 38000,
+    rentUnfurnishedMax: 45000,
+    saleAskingLowest: 720000,
+    saleAskingHighest: 800000,
+    notes:
+      "1BR furnished: 724 sqft AED 50,000–54,000; 1,120 sqft AED 53,000–57,000. Unfurnished: 825 sqft AED 38,000–41,000; 1,360 sqft AED 42,000–45,000. Sale ~771 sqft.",
+  }),
+  verifiedProfile({
+    communitySlug: "marina-residences",
+    communityName: "Marina Residences",
+    bedroomCount: 2,
+    rentFurnishedMin: 58000,
+    rentFurnishedMax: 66000,
+    rentUnfurnishedMin: 57000,
+    rentUnfurnishedMax: 63000,
+    saleAskingLowest: 960000,
+    saleAskingHighest: 1100000,
+  }),
+  verifiedProfile({
+    communitySlug: "marina-residences",
+    communityName: "Marina Residences",
+    bedroomCount: 3,
+    rentFurnishedMin: 98000,
+    rentFurnishedMax: 110000,
+    rentUnfurnishedMin: 89000,
+    rentUnfurnishedMax: 91000,
+    saleAskingLowest: 1680000,
+    saleAskingHighest: 1850000,
+  }),
+];
+
+const BAY_RESIDENCES: MarketProfileSeed[] = [
+  verifiedProfile({
+    communitySlug: "bay-residences",
+    communityName: "Bay Residences",
+    bedroomCount: 0,
+    rentUnfurnishedMin: 60000,
+    rentUnfurnishedMax: 165000,
+    saleAskingLowest: 1300000,
+    saleAskingHighest: 3300000,
+    notes: "Apartments 1–4 bedrooms (community-level verified range).",
+  }),
+];
+
+const GATEWAY_RESIDENCES: MarketProfileSeed[] = [
+  verifiedProfile({
+    communitySlug: "gateway-residences",
+    communityName: "Gateway Residences",
+    bedroomCount: 0,
+    rentUnfurnishedMin: 60000,
+    rentUnfurnishedMax: 140000,
+    saleAskingLowest: 1000000,
+    saleAskingHighest: 2200000,
+    notes: "Apartments 1–3 bedrooms (community-level verified range).",
+  }),
+];
+
+const BERMUDA: MarketProfileSeed[] = [
+  verifiedProfile({
+    communitySlug: "bermuda",
+    communityName: "Bermuda",
+    bedroomCount: 2,
+    saleAskingLowest: 2500000,
+    saleAskingHighest: 2500000,
+    notes: "Villa 2 Bed / 3 Bath — 2,575 sqft — Sea View — AED 2,500,000. Sale only.",
+  }),
+  verifiedProfile({
+    communitySlug: "bermuda",
+    communityName: "Bermuda",
+    bedroomCount: 3,
+    saleAskingLowest: 3900000,
+    saleAskingHighest: 4000000,
+    notes:
+      "Villa 3 Bed / 4 Bath AED 3,900,000 (3,760 sqft). Villa 3 Bed / 5 Bath AED 4,000,000 (3,750 sqft). Sale only.",
+  }),
+  verifiedProfile({
+    communitySlug: "bermuda",
+    communityName: "Bermuda",
+    bedroomCount: 4,
+    saleAskingLowest: 4500000,
+    saleAskingHighest: 5700000,
+    notes:
+      "Villa 4 Bed / 6 Bath AED 4,500,000–5,700,000 (4,750 sqft). Sale only.",
+  }),
+  verifiedProfile({
+    communitySlug: "bermuda",
+    communityName: "Bermuda",
+    bedroomCount: 5,
+    saleAskingLowest: 6500000,
+    saleAskingHighest: 11000000,
+    notes:
+      "Villa 5 Bed / 6–7 Bath AED 6,500,000–11,000,000 (4,700–6,500 sqft). Sale only.",
+  }),
+];
+
+const MALIBU: MarketProfileSeed[] = [
+  verifiedProfile({
+    communitySlug: "malibu",
+    communityName: "Malibu",
+    bedroomCount: 3,
+    saleAskingLowest: 1600000,
+    saleAskingHighest: 1800000,
+    notes: "3 Bed / 4 Bath — 3,250 sqft — AED 1.60M–1.80M.",
+  }),
+  verifiedProfile({
+    communitySlug: "malibu",
+    communityName: "Malibu",
+    bedroomCount: 4,
+    saleAskingLowest: 1800000,
+    saleAskingHighest: 2500000,
+    notes:
+      "4 Bed / 5 Bath AED 1.80M–2.20M. 4 Bed / 6 Bath AED 2.50M. Large villa tiers: AED 3.0M–3.5M (3,500 sqft, Internal View); AED 5.0M–5.5M (5,500 sqft, Beach Side); AED 7.0M–7.5M (7,500 sqft, Beach View).",
+  }),
+];
+
+const FLAMINGO: MarketProfileSeed[] = [
+  verifiedProfile({
+    communitySlug: "flamingo",
+    communityName: "Flamingo",
+    bedroomCount: 0,
+    saleAskingLowest: 1900000,
+    saleAskingHighest: 2800000,
+    notes:
+      "Verified sale prices: AED 1,900,000; AED 2,100,000; AED 2,500,000; AED 2,750,000; AED 2,800,000. Sale only.",
+  }),
+];
+
+const MARBELLA_PENDING: MarketProfileSeed[] = [
+  {
+    communitySlug: "marbella",
+    communityName: "Marbella",
+    bedroomCount: 0,
+    isEstimated: true,
+    confidencePercent: 0,
+    notes:
+      "No verified values imported — source material unreadable (Sprint 6).\n\n" +
+      PENDING_STATUS_NOTE,
+  },
+];
+
 const ESTIMATED_COMMUNITIES: MarketProfileSeed[] = [
-  ...ROYAL_BREEZE.map((row) =>
-    scaleProfile(
-      row,
-      "marina-residences",
-      "Marina Residences",
-      1.08,
-      74,
-      "Estimated from Royal Breeze (+8% marina premium)."
-    )
-  ),
   ...PACIFIC.map((row) =>
     scaleProfile(
       row,
@@ -515,8 +696,25 @@ export const MARKET_INTELLIGENCE_SEED: MarketProfileSeed[] = [
   ...BAB_AL_BAHR,
   ...PACIFIC,
   ...MINA_AL_ARAB,
+  ...MARINA_RESIDENCES,
+  ...BAY_RESIDENCES,
+  ...GATEWAY_RESIDENCES,
+  ...BERMUDA,
+  ...MALIBU,
+  ...FLAMINGO,
+  ...MARBELLA_PENDING,
   ...ESTIMATED_COMMUNITIES,
 ];
+
+/** Communities with founder-verified research (Sprint 6). */
+export const VERIFIED_COMMUNITY_SLUGS = [
+  "marina-residences",
+  "bay-residences",
+  "gateway-residences",
+  "bermuda",
+  "malibu",
+  "flamingo",
+] as const;
 
 export function toPrismaMarketSeed(
   row: MarketProfileSeed

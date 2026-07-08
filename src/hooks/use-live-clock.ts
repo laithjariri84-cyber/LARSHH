@@ -25,7 +25,7 @@ export function useLiveClock(
 
     const id = window.setInterval(tick, intervalMs);
     return () => window.clearInterval(id);
-  }, [intervalMs, optionsKey]);
+  }, [intervalMs, optionsKey, formatOptions]);
 
   return value;
 }

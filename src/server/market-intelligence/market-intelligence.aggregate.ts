@@ -1,4 +1,8 @@
 import {
+  findCommunityIdByName,
+  getCommunityIntelligenceCmsByCommunityId,
+} from "./cms";
+import {
   buildCommunityMarketSummary,
   formatRentRange,
   type CommunityMarketSummary,
@@ -65,5 +69,40 @@ export async function getCommunityMarketSummaryByName(
 ): Promise<CommunityMarketSummary | null> {
   const slug = resolveCommunitySlug(communityName);
   if (!slug) return null;
-  return getCommunityMarketSummary(slug, bedroomCount);
+
+  const summary = await getCommunityMarketSummary(slug, bedroomCount);
+  const communityId = await findCommunityIdByName(communityName);
+  if (!communityId) return summary;
+
+  const cms = await getCommunityIntelligenceCmsByCommunityId(communityId);
+  if (!cms) return summary;
+
+  return {
+    ...(summary ?? {
+      communitySlug: slug,
+      communityName,
+      available: false,
+      averageSalePrice: null,
+      lowestSalePrice: null,
+      highestSalePrice: null,
+      averageRent: null,
+      furnishedRentMin: null,
+      furnishedRentMax: null,
+      unfurnishedRentMin: null,
+      unfurnishedRentMax: null,
+      roi: null,
+      pricePerSqft: null,
+      demand: null,
+      confidence: null,
+      isEstimated: false,
+      profiles: [],
+    }),
+    available: true,
+    communityName: cms.communityName,
+    averageSalePrice: cms.averageSalePriceAed ?? summary?.averageSalePrice ?? null,
+    averageRent: cms.averageRentAedYear ?? summary?.averageRent ?? null,
+    pricePerSqft: cms.averagePricePerSqftAed ?? summary?.pricePerSqft ?? null,
+    roi: cms.averageRoiPercent ?? summary?.roi ?? null,
+    demand: cms.rentalDemand ?? summary?.demand ?? null,
+  };
 }

@@ -21,6 +21,8 @@ export type SidebarNavItem = {
   icon: LucideIcon;
   featured?: boolean;
   keywords?: string[];
+  /** Visible only to the market intelligence CMS admin. */
+  miAdminOnly?: boolean;
 };
 
 export type SidebarNavGroup = {
@@ -115,9 +117,23 @@ export const sidebarNavGroups: SidebarNavGroup[] = [
     ],
   },
   {
+    id: "admin",
+    title: "Admin",
+    icon: Shield,
+    items: [
+      {
+        title: "Market Intelligence",
+        href: "/admin/market-intelligence",
+        icon: Shield,
+        keywords: ["admin", "cms", "benchmarks", "community intelligence"],
+        miAdminOnly: true,
+      },
+    ],
+  },
+  {
     id: "administration",
     title: "Administration",
-    icon: Shield,
+    icon: Settings,
     items: [
       {
         title: "Agents",
@@ -131,12 +147,6 @@ export const sidebarNavGroups: SidebarNavGroup[] = [
         icon: Settings,
         keywords: ["preferences", "account"],
       },
-      {
-        title: "Market Intelligence Admin",
-        href: "/settings/market-intelligence",
-        icon: Shield,
-        keywords: ["admin", "benchmarks", "data"],
-      },
     ],
   },
 ];
@@ -149,8 +159,19 @@ const exactMatchRoutes = new Set([
   "/crm",
   "/intelligence",
   "/market-analysis",
-  "/settings/market-intelligence",
+  "/admin/market-intelligence",
 ]);
+
+export function filterSidebarNavGroups(showMiAdmin: boolean): SidebarNavGroup[] {
+  return sidebarNavGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !item.miAdminOnly || showMiAdmin
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+}
 
 export function isNavItemActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
@@ -160,7 +181,7 @@ export function isNavItemActive(pathname: string, href: string): boolean {
   }
 
   if (href === "/settings") {
-    return pathname.startsWith("/settings/") && !pathname.startsWith("/settings/market-intelligence");
+    return pathname.startsWith("/settings/") && !pathname.startsWith("/admin/");
   }
 
   return pathname.startsWith(`${href}/`);

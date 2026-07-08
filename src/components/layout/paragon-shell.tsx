@@ -6,15 +6,19 @@ import { Bell, Menu } from "lucide-react";
 
 import { PageTransition } from "@/components/ui/page-transition";
 
+import type { ShellUser } from "@/lib/auth";
+
 import { Breadcrumbs } from "./breadcrumbs";
 import { ParagonSidebar } from "./paragon-sidebar";
 import { UserMenu } from "./user-menu";
 
 type ParagonShellProps = {
   children: React.ReactNode;
+  user: ShellUser;
+  showMiAdmin?: boolean;
 };
 
-export function ParagonShell({ children }: ParagonShellProps) {
+export function ParagonShell({ children, user, showMiAdmin = false }: ParagonShellProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -63,7 +67,11 @@ export function ParagonShell({ children }: ParagonShellProps) {
   return (
     <div className="flex min-h-svh bg-background">
       <div className="hidden lg:flex">
-        <ParagonSidebar collapsed={collapsed} onToggle={toggleCollapsed} />
+        <ParagonSidebar
+          collapsed={collapsed}
+          onToggle={toggleCollapsed}
+          showMiAdmin={showMiAdmin}
+        />
       </div>
 
       {mobileOpen ? (
@@ -80,6 +88,7 @@ export function ParagonShell({ children }: ParagonShellProps) {
               isMobileDrawer
               onToggle={closeMobileDrawer}
               onNavigate={closeMobileDrawer}
+              showMiAdmin={showMiAdmin}
             />
           </div>
         </div>
@@ -109,7 +118,7 @@ export function ParagonShell({ children }: ParagonShellProps) {
               <span className="bg-gold absolute top-1.5 right-1.5 size-1.5 rounded-full" />
             </button>
             <div className="border-border border-l pl-2 sm:pl-3">
-              <UserMenu />
+              <UserMenu user={user} />
             </div>
           </div>
         </header>

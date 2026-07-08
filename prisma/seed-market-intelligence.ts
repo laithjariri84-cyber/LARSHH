@@ -4,6 +4,7 @@ import {
   MARKET_INTELLIGENCE_SEED,
   toPrismaMarketSeed,
 } from "./seeds/market-intelligence.seed";
+import { seedVerifiedCmsProfiles } from "./seeds/verified-market-research.seed";
 
 export async function seedMarketIntelligence() {
   console.log(
@@ -24,6 +25,18 @@ export async function seedMarketIntelligence() {
   }
 
   console.log("Market intelligence seed complete.");
+
+  const cmsResult = await seedVerifiedCmsProfiles();
+  if (cmsResult.upserted.length) {
+    console.log(
+      `Verified CMS profiles upserted: ${cmsResult.upserted.join(", ")}`
+    );
+  }
+  if (cmsResult.skipped.length) {
+    console.log(
+      `Verified CMS skipped (community not in DB): ${cmsResult.skipped.join(", ")}`
+    );
+  }
 }
 
 async function main() {

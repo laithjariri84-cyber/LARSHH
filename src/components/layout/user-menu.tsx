@@ -2,8 +2,10 @@
 
 import { LogOut, Settings } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-import { mockUser } from "@/features/dashboard/data/mock-dashboard";
+import type { ShellUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,10 +19,22 @@ import { cn } from "@/lib/utils";
 import { ThemeSelector } from "./theme-selector";
 
 type UserMenuProps = {
+  user: ShellUser;
   className?: string;
 };
 
-export function UserMenu({ className }: UserMenuProps) {
+export function UserMenu({ user, className }: UserMenuProps) {
+  const router = useRouter();
+
+  async function handleSignOut() {
+    if (process.env.NEXT_PUBLIC_UI_ONLY !== "true") {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    }
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -33,8 +47,8 @@ export function UserMenu({ className }: UserMenuProps) {
           aria-label="Open user menu"
         >
           <div className="hidden text-right sm:block">
-            <p className="text-sm font-medium">{mockUser.name}</p>
-            <p className="text-muted-foreground text-xs">{mockUser.role}</p>
+            <p className="text-sm font-medium">{user.name}</p>
+            <p className="text-muted-foreground text-xs">{user.role}</p>
           </div>
           <div
             className={cn(
@@ -42,14 +56,16 @@ export function UserMenu({ className }: UserMenuProps) {
               "text-gold-foreground shadow-md shadow-gold/20"
             )}
           >
-            {mockUser.initials}
+            {user.initials}
           </div>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
-          <p className="text-sm font-medium">{mockUser.name}</p>
-          <p className="text-muted-foreground text-xs">{mockUser.role}</p>
+          <p className="text-sm font-medium">{user.name}</p>
+          <p className="text-muted-foreground text-xs">
+            {user.email || user.role}
+          </p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <ThemeSelector />
@@ -59,11 +75,14 @@ export function UserMenu({ className }: UserMenuProps) {
             Settings
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/auth/signout" className="flex cursor-pointer items-center gap-2">
-            <LogOut className="text-muted-foreground size-4" />
-            Sign out
-          </Link>
+        <DropdownMenuItem
+          className="flex cursor-pointer items-center gap-2"
+          onSelect={() => {
+            void handleSignOut();
+          }}
+        >
+          <LogOut className="text-muted-foreground size-4" />
+          Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -6,6 +6,7 @@ import {
   searchProperties as searchPropertiesFromDb,
   getPropertyById as getPropertyByIdFromDb,
 } from "@/lib/repositories/property.repository";
+import { isUiOnlyMode } from "@/lib/ui-only";
 
 import type { SearchFiltersInput } from "../schemas/search-filters.schema";
 import type { FilterOption } from "../types";
@@ -28,14 +29,23 @@ export async function searchProperties(filters: SearchFiltersInput = {}) {
 }
 
 export async function loadSearchPageData(filters: SearchFiltersInput = {}) {
-  const { properties, communities, buildings } =
-    await fetchSearchPageData(filters);
+  if (isUiOnlyMode()) {
+    return { results: [], communities: [], buildings: [] };
+  }
 
-  return {
-    results: mapSearchResultsSafely(properties),
-    communities: communities.map((c) => ({ value: c.id, label: c.name })),
-    buildings: buildings.map((b) => ({ value: b.id, label: b.name })),
-  };
+  try {
+    const { properties, communities, buildings } =
+      await fetchSearchPageData(filters);
+
+    return {
+      results: mapSearchResultsSafely(properties),
+      communities: communities.map((c) => ({ value: c.id, label: c.name })),
+      buildings: buildings.map((b) => ({ value: b.id, label: b.name })),
+    };
+  } catch (error) {
+    console.error("[search] loadSearchPageData:", error);
+    return { results: [], communities: [], buildings: [] };
+  }
 }
 
 export async function getPropertyById(id: string) {
