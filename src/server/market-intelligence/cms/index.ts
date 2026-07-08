@@ -4,6 +4,7 @@ export {
   upsertCommunityIntelligenceCms,
   deleteCommunityIntelligenceCms,
   findCommunityIdByName,
+  communityExists,
 } from "./cms.repository";
 
 export { calculateCommunityMetricsFromListings } from "./cms.calculated";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Save, Trash2 } from "lucide-react";
+import { Loader2, Save, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,12 @@ import {
   INTELLIGENCE_UNIT_CATEGORIES,
   INTELLIGENCE_UNIT_LABELS,
 } from "@/server/market-intelligence/cms";
+
+const TEXTAREA_CLASS =
+  "border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring mt-2 min-h-24 w-full rounded-xl border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none";
+
+const UNSAVED_MESSAGE =
+  "You have unsaved changes. Leave this community without saving?";
 
 type TabId =
   | "general"
@@ -85,15 +91,75 @@ function parseIntField(value: string): number | null {
   return Math.round(parsed);
 }
 
+function snapshotDraft(draft: Draft): string {
+  return JSON.stringify(draft);
+}
+
+function buildDraftFromRecord(data: CommunityIntelligenceCmsRecord): Draft {
+  const manualUnits = INTELLIGENCE_UNIT_CATEGORIES.map((unitType) => {
+    const row = data.manual.unitTypes.find((item) => item.unitType === unitType);
+    return {
+      unitType,
+      averageSalePriceAed: row?.averageSalePriceAed ?? null,
+      averageRentAedYear: row?.averageRentAedYear ?? null,
+      averagePricePerSqftAed: row?.averagePricePerSqftAed ?? null,
+      isCalculated: false,
+    };
+  });
+
+  return {
+    communityName: data.communityName,
+    overview: data.overview,
+    investmentSummary: data.investmentSummary,
+    bestFor: data.bestFor,
+    marketNotes: data.marketNotes,
+    averageSalePriceAed: data.manual.averageSalePriceAed,
+    averageRentAedYear: data.manual.averageRentAedYear,
+    averagePricePerSqftAed: data.manual.averagePricePerSqftAed,
+    averageRoiPercent: data.manual.averageRoiPercent,
+    capitalAppreciationPercent: data.capitalAppreciationPercent,
+    rentalDemand: data.rentalDemand,
+    occupancyRatePercent: data.occupancyRatePercent,
+    luxuryScore: data.luxuryScore,
+    familyScore: data.familyScore,
+    investmentScore: data.investmentScore,
+    lifestyleScore: data.lifestyleScore,
+    walkability: data.walkability,
+    beachAccess: data.beachAccess,
+    shortTermRentalScore: data.shortTermRentalScore,
+    longTermRentalScore: data.longTermRentalScore,
+    hiddenMarketInsights: data.hiddenMarketInsights,
+    futureDevelopments: data.futureDevelopments,
+    thingsBuyersShouldKnow: data.thingsBuyersShouldKnow,
+    thingsInvestorsShouldKnow: data.thingsInvestorsShouldKnow,
+    unitTypes: manualUnits,
+    prosText: (data.pros ?? []).join("\n"),
+    consText: (data.cons ?? []).join("\n"),
+    nearbySchoolsText: placesToLines(data.nearbySchools),
+    nearbyHospitalsText: placesToLines(data.nearbyHospitals),
+    nearbyRestaurantsText: placesToLines(data.nearbyRestaurants),
+    nearbySupermarketsText: placesToLines(data.nearbySupermarkets),
+    nearbyHotelsText: placesToLines(data.nearbyHotels),
+    nearbyShoppingText: placesToLines(data.nearbyShopping),
+  };
+}
+
 export function MarketIntelligenceCmsPanel() {
   const [communities, setCommunities] = useState<CommunityListItem[]>([]);
+  const [communityQuery, setCommunityQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [record, setRecord] = useState<CommunityIntelligenceCmsRecord | null>(null);
   const [draft, setDraft] = useState<Draft>({});
+  const [savedSnapshot, setSavedSnapshot] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const [loadingList, setLoadingList] = useState(true);
   const [loadingRecord, setLoadingRecord] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const isDirty = useMemo(
+    () => snapshotDraft(draft) !== savedSnapshot,
+    [draft, savedSnapshot]
+  );
 
   const loadCommunities = useCallback(async () => {
     setLoadingList(true);
@@ -103,59 +169,99 @@ export function MarketIntelligenceCmsPanel() {
         toast.error("You are not authorized to manage market intelligence.");
         return;
       }
+      if (!response.ok) {
+        throw new Error("list failed");
+      }
       const payload = await response.json();
       setCommunities(payload.data ?? []);
-      if (!selectedId && payload.data?.[0]?.id) {
-        setSelectedId(payload.data[0].id);
-      }
     } catch {
       toast.error("Failed to load communities.");
     } finally {
       setLoadingList(false);
     }
-  }, [selectedId]);
-
-  const loadRecord = useCallback(async (communityId: string) => {
-    setLoadingRecord(true);
-    try {
-      const response = await fetch(
-        `/api/v1/admin/market-intelligence/${communityId}`
-      );
-      if (!response.ok) throw new Error("load failed");
-      const payload = await response.json();
-      const data = payload.data as CommunityIntelligenceCmsRecord;
-      setRecord(data);
-      setDraft({
-        ...data,
-        prosText: (data.pros ?? []).join("\n"),
-        consText: (data.cons ?? []).join("\n"),
-        nearbySchoolsText: placesToLines(data.nearbySchools),
-        nearbyHospitalsText: placesToLines(data.nearbyHospitals),
-        nearbyRestaurantsText: placesToLines(data.nearbyRestaurants),
-        nearbySupermarketsText: placesToLines(data.nearbySupermarkets),
-        nearbyHotelsText: placesToLines(data.nearbyHotels),
-        nearbyShoppingText: placesToLines(data.nearbyShopping),
-      });
-    } catch {
-      toast.error("Failed to load community intelligence profile.");
-      setRecord(null);
-    } finally {
-      setLoadingRecord(false);
-    }
   }, []);
+
+  const applyRecordToForm = useCallback((data: CommunityIntelligenceCmsRecord) => {
+    const nextDraft = buildDraftFromRecord(data);
+    setRecord(data);
+    setDraft(nextDraft);
+    setSavedSnapshot(snapshotDraft(nextDraft));
+  }, []);
+
+  const loadRecord = useCallback(
+    async (communityId: string) => {
+      setLoadingRecord(true);
+      try {
+        const response = await fetch(
+          `/api/v1/admin/market-intelligence/${communityId}`
+        );
+        if (response.status === 404) {
+          toast.error("Community not found in the database.");
+          setRecord(null);
+          setDraft({});
+          setSavedSnapshot("");
+          return;
+        }
+        if (!response.ok) throw new Error("load failed");
+        const payload = await response.json();
+        applyRecordToForm(payload.data as CommunityIntelligenceCmsRecord);
+      } catch {
+        toast.error("Failed to load community intelligence profile.");
+        setRecord(null);
+        setDraft({});
+        setSavedSnapshot("");
+      } finally {
+        setLoadingRecord(false);
+      }
+    },
+    [applyRecordToForm]
+  );
 
   useEffect(() => {
     void loadCommunities();
   }, [loadCommunities]);
 
   useEffect(() => {
+    if (!selectedId && communities.length > 0) {
+      setSelectedId(communities[0].id);
+    }
+  }, [communities, selectedId]);
+
+  useEffect(() => {
     if (selectedId) void loadRecord(selectedId);
   }, [selectedId, loadRecord]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isDirty]);
+
+  const filteredCommunities = useMemo(() => {
+    const query = communityQuery.trim().toLowerCase();
+    if (!query) return communities;
+    return communities.filter(
+      (community) =>
+        community.name.toLowerCase().includes(query) ||
+        community.masterCommunityName.toLowerCase().includes(query) ||
+        community.slug.toLowerCase().includes(query)
+    );
+  }, [communities, communityQuery]);
 
   const selectedCommunity = useMemo(
     () => communities.find((row) => row.id === selectedId) ?? null,
     [communities, selectedId]
   );
+
+  function handleSelectCommunity(communityId: string) {
+    if (communityId === selectedId) return;
+    if (isDirty && !window.confirm(UNSAVED_MESSAGE)) return;
+    setSelectedId(communityId);
+  }
 
   function updateDraft(patch: Partial<Draft>) {
     setDraft((current) => ({ ...current, ...patch }));
@@ -167,14 +273,14 @@ export function MarketIntelligenceCmsPanel() {
     value: string
   ) {
     setDraft((current) => {
-      const unitTypes = [...(current.unitTypes ?? record?.unitTypes ?? [])];
+      const unitTypes = [...(current.unitTypes ?? [])];
       const index = unitTypes.findIndex((row) => row.unitType === unitType);
+      const existing = index >= 0 ? unitTypes[index] : null;
       const next = {
         unitType,
-        averageSalePriceAed: index >= 0 ? unitTypes[index].averageSalePriceAed : null,
-        averageRentAedYear: index >= 0 ? unitTypes[index].averageRentAedYear : null,
-        averagePricePerSqftAed:
-          index >= 0 ? unitTypes[index].averagePricePerSqftAed : null,
+        averageSalePriceAed: existing?.averageSalePriceAed ?? null,
+        averageRentAedYear: existing?.averageRentAedYear ?? null,
+        averagePricePerSqftAed: existing?.averagePricePerSqftAed ?? null,
         isCalculated: false,
       };
       next[field] = parseNum(value);
@@ -185,16 +291,35 @@ export function MarketIntelligenceCmsPanel() {
   }
 
   async function saveProfile() {
-    if (!selectedId || !draft.communityName) return;
+    if (!selectedId) {
+      toast.error("Select a community first.");
+      return;
+    }
+    if (!draft.communityName?.trim()) {
+      toast.error("Community name is required.");
+      return;
+    }
+
+    if (!isDirty) {
+      toast.info("No changes to save.");
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
-        communityName: draft.communityName,
+        communityName: draft.communityName.trim(),
         overview: draft.overview ?? null,
         investmentSummary: draft.investmentSummary ?? null,
         bestFor: draft.bestFor ?? null,
-        pros: (draft.prosText ?? "").split("\n").map((line) => line.trim()).filter(Boolean),
-        cons: (draft.consText ?? "").split("\n").map((line) => line.trim()).filter(Boolean),
+        pros: (draft.prosText ?? "")
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean),
+        cons: (draft.consText ?? "")
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean),
         marketNotes: draft.marketNotes ?? null,
         averageSalePriceAed: draft.averageSalePriceAed ?? null,
         averageRentAedYear: draft.averageRentAedYear ?? null,
@@ -221,12 +346,19 @@ export function MarketIntelligenceCmsPanel() {
         futureDevelopments: draft.futureDevelopments ?? null,
         thingsBuyersShouldKnow: draft.thingsBuyersShouldKnow ?? null,
         thingsInvestorsShouldKnow: draft.thingsInvestorsShouldKnow ?? null,
-        unitTypes: (draft.unitTypes ?? record?.unitTypes ?? []).map((row) => ({
-          unitType: row.unitType,
-          averageSalePriceAed: row.averageSalePriceAed,
-          averageRentAedYear: row.averageRentAedYear,
-          averagePricePerSqftAed: row.averagePricePerSqftAed,
-        })),
+        unitTypes: (draft.unitTypes ?? [])
+          .filter(
+            (row) =>
+              row.averageSalePriceAed !== null ||
+              row.averageRentAedYear !== null ||
+              row.averagePricePerSqftAed !== null
+          )
+          .map((row) => ({
+            unitType: row.unitType,
+            averageSalePriceAed: row.averageSalePriceAed,
+            averageRentAedYear: row.averageRentAedYear,
+            averagePricePerSqftAed: row.averagePricePerSqftAed,
+          })),
       };
 
       const response = await fetch(
@@ -238,9 +370,16 @@ export function MarketIntelligenceCmsPanel() {
         }
       );
 
-      if (!response.ok) throw new Error("save failed");
+      if (!response.ok) {
+        const errorBody = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        toast.error(errorBody?.error ?? "Unable to save market intelligence.");
+        return;
+      }
+
       const saved = await response.json();
-      setRecord(saved.data);
+      applyRecordToForm(saved.data as CommunityIntelligenceCmsRecord);
       toast.success("Market intelligence saved.");
       void loadCommunities();
     } catch {
@@ -252,16 +391,29 @@ export function MarketIntelligenceCmsPanel() {
 
   async function clearProfile() {
     if (!selectedId) return;
-    if (!window.confirm("Delete the manual CMS profile for this community?")) return;
+    if (isDirty && !window.confirm(UNSAVED_MESSAGE)) return;
+    if (
+      !window.confirm(
+        "Delete the manual CMS profile for this community? Calculated listing fallbacks will remain."
+      )
+    ) {
+      return;
+    }
 
     try {
       const response = await fetch(
         `/api/v1/admin/market-intelligence/${selectedId}`,
         { method: "DELETE" }
       );
-      if (!response.ok) throw new Error("delete failed");
+      if (!response.ok) {
+        const errorBody = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        toast.error(errorBody?.error ?? "Unable to delete profile.");
+        return;
+      }
       toast.success("Manual profile deleted. Calculated fallbacks remain.");
-      void loadRecord(selectedId);
+      await loadRecord(selectedId);
       void loadCommunities();
     } catch {
       toast.error("Unable to delete profile.");
@@ -277,27 +429,62 @@ export function MarketIntelligenceCmsPanel() {
     );
   }
 
+  if (communities.length === 0) {
+    return (
+      <div className="larssh-card rounded-2xl p-8 text-center">
+        <p className="font-medium">No communities found in the database.</p>
+        <p className="text-muted-foreground mt-2 text-sm">
+          Import or sync communities first, then return to manage market
+          intelligence profiles.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
       <aside className="larssh-card rounded-2xl p-4">
         <p className="text-muted-foreground mb-3 text-xs font-medium tracking-wide uppercase">
-          Communities
+          Communities ({communities.length})
         </p>
+        <div className="relative mb-3">
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Input
+            className="pl-9"
+            placeholder="Search communities…"
+            value={communityQuery}
+            onChange={(event) => setCommunityQuery(event.target.value)}
+          />
+        </div>
         <div className="max-h-[70vh] space-y-1 overflow-y-auto">
-          {communities.map((community) => (
+          {filteredCommunities.map((community) => (
             <button
               key={community.id}
               type="button"
-              onClick={() => setSelectedId(community.id)}
+              onClick={() => handleSelectCommunity(community.id)}
               className={cn(
                 "hover:bg-accent w-full rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
                 selectedId === community.id && "bg-gold-muted text-gold"
               )}
             >
-              <p className="font-medium">{community.name}</p>
-              <p className="text-muted-foreground text-xs">{community.masterCommunityName}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium">{community.name}</p>
+                {community.hasCmsProfile ? (
+                  <span className="bg-gold-muted text-gold shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase">
+                    CMS
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-muted-foreground text-xs">
+                {community.masterCommunityName}
+              </p>
             </button>
           ))}
+          {filteredCommunities.length === 0 ? (
+            <p className="text-muted-foreground px-2 py-4 text-xs">
+              No communities match your search.
+            </p>
+          ) : null}
         </div>
       </aside>
 
@@ -309,6 +496,7 @@ export function MarketIntelligenceCmsPanel() {
             </h2>
             <p className="text-muted-foreground text-xs">
               Currency: AED · Manual values override calculated listing benchmarks
+              {isDirty ? " · Unsaved changes" : ""}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -316,7 +504,7 @@ export function MarketIntelligenceCmsPanel() {
               variant="outline"
               size="sm"
               onClick={() => void clearProfile()}
-              disabled={!selectedId || saving}
+              disabled={!selectedId || saving || loadingRecord}
             >
               <Trash2 className="size-4" />
               Reset manual
@@ -324,7 +512,7 @@ export function MarketIntelligenceCmsPanel() {
             <Button
               size="sm"
               className="larssh-gold-btn"
-              disabled={!selectedId || saving}
+              disabled={!selectedId || saving || loadingRecord}
               onClick={() => void saveProfile()}
             >
               {saving ? (
@@ -407,7 +595,7 @@ function Field({
       <Label className="larssh-label">{label}</Label>
       {multiline ? (
         <textarea
-          className="border-input bg-background mt-2 min-h-24 w-full rounded-xl border px-3 py-2 text-sm"
+          className={TEXTAREA_CLASS}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -487,10 +675,27 @@ function MarketTab({
   record: CommunityIntelligenceCmsRecord | null;
   updateDraft: (patch: Partial<Draft>) => void;
 }) {
-  const sourceHint = (field: keyof CommunityIntelligenceCmsRecord["sources"]) => {
+  const sourceHint = (
+    field: keyof CommunityIntelligenceCmsRecord["sources"],
+    manualValue: number | null | undefined
+  ) => {
     const source = record?.sources[field];
-    if (!source) return "No value — will use calculated listing data when available";
-    return source === "manual" ? "Manual CMS value" : "Calculated from active listings";
+    const calculatedValue = record?.calculated[field];
+
+    if (source === "manual" || manualValue !== null) {
+      return "Manual CMS value";
+    }
+
+    if (calculatedValue !== null && calculatedValue !== undefined) {
+      if (field === "averageRoiPercent") {
+        return `Calculated from listings: ${calculatedValue}%`;
+      }
+      return `Calculated from listings: ${formatCurrency(calculatedValue, "AED")}${
+        field === "averageRentAedYear" ? "/yr" : ""
+      }`;
+    }
+
+    return "No value — calculated listing data will be used when available";
   };
 
   return (
@@ -498,25 +703,25 @@ function MarketTab({
       <NumberField
         label="Average Sale Price (AED)"
         value={num(draft.averageSalePriceAed)}
-        hint={sourceHint("averageSalePriceAed")}
+        hint={sourceHint("averageSalePriceAed", draft.averageSalePriceAed)}
         onChange={(value) => updateDraft({ averageSalePriceAed: parseNum(value) })}
       />
       <NumberField
         label="Average Rent (AED/year)"
         value={num(draft.averageRentAedYear)}
-        hint={sourceHint("averageRentAedYear")}
+        hint={sourceHint("averageRentAedYear", draft.averageRentAedYear)}
         onChange={(value) => updateDraft({ averageRentAedYear: parseNum(value) })}
       />
       <NumberField
         label="Average Price per Sqft (AED)"
         value={num(draft.averagePricePerSqftAed)}
-        hint={sourceHint("averagePricePerSqftAed")}
+        hint={sourceHint("averagePricePerSqftAed", draft.averagePricePerSqftAed)}
         onChange={(value) => updateDraft({ averagePricePerSqftAed: parseNum(value) })}
       />
       <NumberField
         label="Average ROI (%)"
         value={num(draft.averageRoiPercent)}
-        hint={sourceHint("averageRoiPercent")}
+        hint={sourceHint("averageRoiPercent", draft.averageRoiPercent)}
         onChange={(value) => updateDraft({ averageRoiPercent: parseNum(value) })}
       />
       <NumberField
@@ -642,9 +847,17 @@ function PropertyTypesTab({
   return (
     <div className="space-y-6">
       {INTELLIGENCE_UNIT_CATEGORIES.map((unitType) => {
-        const row =
-          draft.unitTypes?.find((item) => item.unitType === unitType) ??
-          record?.unitTypes.find((item) => item.unitType === unitType);
+        const draftRow = draft.unitTypes?.find((item) => item.unitType === unitType);
+        const calculatedRow = record?.calculated.unitTypes.find(
+          (item) => item.unitType === unitType
+        );
+        const hasManual = Boolean(
+          draftRow &&
+            (draftRow.averageSalePriceAed !== null ||
+              draftRow.averageRentAedYear !== null ||
+              draftRow.averagePricePerSqftAed !== null)
+        );
+
         return (
           <section
             key={unitType}
@@ -652,40 +865,53 @@ function PropertyTypesTab({
           >
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-medium">{INTELLIGENCE_UNIT_LABELS[unitType]}</h3>
-              {row?.isCalculated ? (
+              {!hasManual && calculatedRow ? (
                 <span className="text-muted-foreground text-xs">
-                  Calculated fallback active
+                  Calculated fallback available
                 </span>
               ) : null}
             </div>
             <div className="grid gap-3 md:grid-cols-3">
               <NumberField
                 label="Average Sale Price (AED)"
-                value={num(row?.averageSalePriceAed)}
+                value={num(draftRow?.averageSalePriceAed)}
+                hint={
+                  calculatedRow?.averageSalePriceAed !== null &&
+                  calculatedRow?.averageSalePriceAed !== undefined
+                    ? `Calculated: ${formatCurrency(calculatedRow.averageSalePriceAed, "AED")}`
+                    : undefined
+                }
                 onChange={(value) =>
                   updateUnitType(unitType, "averageSalePriceAed", value)
                 }
               />
               <NumberField
                 label="Average Rent (AED/year)"
-                value={num(row?.averageRentAedYear)}
+                value={num(draftRow?.averageRentAedYear)}
+                hint={
+                  calculatedRow?.averageRentAedYear !== null &&
+                  calculatedRow?.averageRentAedYear !== undefined
+                    ? `Calculated: ${formatCurrency(calculatedRow.averageRentAedYear, "AED")}/yr`
+                    : undefined
+                }
                 onChange={(value) =>
                   updateUnitType(unitType, "averageRentAedYear", value)
                 }
               />
               <NumberField
                 label="Average Price/Sqft (AED)"
-                value={num(row?.averagePricePerSqftAed)}
+                value={num(draftRow?.averagePricePerSqftAed)}
+                hint={
+                  calculatedRow?.averagePricePerSqftAed !== null &&
+                  calculatedRow?.averagePricePerSqftAed !== undefined
+                    ? `Calculated: ${formatCurrency(calculatedRow.averagePricePerSqftAed, "AED")}`
+                    : undefined
+                }
                 onChange={(value) =>
                   updateUnitType(unitType, "averagePricePerSqftAed", value)
                 }
               />
             </div>
-            {row?.averageSalePriceAed !== null && row?.averageSalePriceAed !== undefined ? (
-              <p className="text-muted-foreground mt-2 text-xs">
-                Preview: {formatCurrency(row.averageSalePriceAed, "AED")}
-              </p>
-            ) : null}
           </section>
         );
       })}

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireMarketIntelligenceAdmin } from "@/lib/market-intelligence-admin-auth";
 import {
+  communityExists,
   deleteCommunityIntelligenceCms,
   getCommunityIntelligenceCmsByCommunityId,
   upsertCommunityIntelligenceCms,
@@ -30,14 +31,14 @@ const upsertSchema = z.object({
   capitalAppreciationPercent: z.number().nullable().optional(),
   rentalDemand: z.enum(["LOW", "MEDIUM", "HIGH"]).nullable().optional(),
   occupancyRatePercent: z.number().nullable().optional(),
-  luxuryScore: z.number().int().min(1).max(10).nullable().optional(),
-  familyScore: z.number().int().min(1).max(10).nullable().optional(),
-  investmentScore: z.number().int().min(1).max(10).nullable().optional(),
-  lifestyleScore: z.number().int().min(1).max(10).nullable().optional(),
+  luxuryScore: z.number().int().min(0).max(10).nullable().optional(),
+  familyScore: z.number().int().min(0).max(10).nullable().optional(),
+  investmentScore: z.number().int().min(0).max(10).nullable().optional(),
+  lifestyleScore: z.number().int().min(0).max(10).nullable().optional(),
   walkability: z.string().nullable().optional(),
   beachAccess: z.string().nullable().optional(),
-  shortTermRentalScore: z.number().int().min(1).max(10).nullable().optional(),
-  longTermRentalScore: z.number().int().min(1).max(10).nullable().optional(),
+  shortTermRentalScore: z.number().int().min(0).max(10).nullable().optional(),
+  longTermRentalScore: z.number().int().min(0).max(10).nullable().optional(),
   nearbySchools: z.array(nearbySchema).optional(),
   nearbyHospitals: z.array(nearbySchema).optional(),
   nearbyRestaurants: z.array(nearbySchema).optional(),
@@ -87,9 +88,17 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const { communityId } = await context.params;
+
+  if (!(await communityExists(communityId))) {
+    return NextResponse.json({ error: "Community not found" }, { status: 404 });
+  }
+
   const record = await getCommunityIntelligenceCmsByCommunityId(communityId);
   if (!record) {
-    return NextResponse.json({ error: "Community not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Unable to load community intelligence profile" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ data: record });
@@ -102,6 +111,11 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 
   const { communityId } = await context.params;
+
+  if (!(await communityExists(communityId))) {
+    return NextResponse.json({ error: "Community not found" }, { status: 404 });
+  }
+
   const body = await request.json();
   const parsed = upsertSchema.safeParse(body);
 
@@ -112,24 +126,32 @@ export async function PUT(request: Request, context: RouteContext) {
     );
   }
 
-  const record = await upsertCommunityIntelligenceCms(
-    communityId,
-    parsed.data,
-    {
-      email: user.email ?? "unknown",
-      name:
-        (typeof user.user_metadata?.full_name === "string" &&
-          user.user_metadata.full_name) ||
-        user.email?.split("@")[0] ||
-        "Admin",
-    }
-  );
+  try {
+    const record = await upsertCommunityIntelligenceCms(
+      communityId,
+      parsed.data,
+      {
+        email: user.email ?? "unknown",
+        name:
+          (typeof user.user_metadata?.full_name === "string" &&
+            user.user_metadata.full_name) ||
+          user.email?.split("@")[0] ||
+          "Admin",
+      }
+    );
 
-  revalidateTag(CACHE_TAGS.marketProfiles);
-  revalidateTag(CACHE_TAGS.marketRoiProfiles);
-  revalidateTag(CACHE_TAGS.communityIntelligenceCms);
+    revalidateTag(CACHE_TAGS.marketProfiles);
+    revalidateTag(CACHE_TAGS.marketRoiProfiles);
+    revalidateTag(CACHE_TAGS.communityIntelligenceCms);
 
-  return NextResponse.json({ data: record });
+    return NextResponse.json({ data: record });
+  } catch (error) {
+    console.error("[admin/market-intelligence] PUT failed:", error);
+    return NextResponse.json(
+      { error: "Failed to save community intelligence profile" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {

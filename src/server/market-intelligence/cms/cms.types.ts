@@ -14,6 +14,24 @@ export type CommunityIntelligenceUnitBenchmarkRecord = {
   isCalculated: boolean;
 };
 
+/** Stored CMS values only (no listing-calculated fallbacks). */
+export type CommunityIntelligenceCmsManualSnapshot = {
+  averageSalePriceAed: number | null;
+  averageRentAedYear: number | null;
+  averagePricePerSqftAed: number | null;
+  averageRoiPercent: number | null;
+  unitTypes: Array<{
+    unitType: IntelligenceUnitCategory;
+    averageSalePriceAed: number | null;
+    averageRentAedYear: number | null;
+    averagePricePerSqftAed: number | null;
+  }>;
+};
+
+/** Listing-derived benchmarks when no manual CMS override exists. */
+export type CommunityIntelligenceCmsCalculatedSnapshot =
+  CommunityIntelligenceCmsManualSnapshot;
+
 export type CommunityIntelligenceCmsRecord = {
   id: string;
   communityId: string;
@@ -61,6 +79,11 @@ export type CommunityIntelligenceCmsRecord = {
     averagePricePerSqftAed: "manual" | "calculated" | null;
     averageRoiPercent: "manual" | "calculated" | null;
   };
+  /** Raw manual CMS values for admin editing (excludes calculated fallbacks). */
+  manual: CommunityIntelligenceCmsManualSnapshot;
+  /** Listing-calculated benchmarks for admin hints and public fallback. */
+  calculated: CommunityIntelligenceCmsCalculatedSnapshot;
+  hasManualProfile: boolean;
 };
 
 export type CommunityListItem = {

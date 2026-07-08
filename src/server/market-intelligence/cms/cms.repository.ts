@@ -3,13 +3,18 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 import type {
+  CommunityIntelligenceCmsCalculatedSnapshot,
+  CommunityIntelligenceCmsManualSnapshot,
   CommunityIntelligenceCmsRecord,
   CommunityListItem,
   NearbyPlace,
   UpsertCommunityIntelligenceCmsInput,
 } from "./cms.types";
 import { INTELLIGENCE_UNIT_CATEGORIES } from "./cms.types";
-import { calculateCommunityMetricsFromListings } from "./cms.calculated";
+import {
+  calculateCommunityMetricsFromListings,
+  type CalculatedCommunityMetrics,
+} from "./cms.calculated";
 
 function decimalToNumber(value: Prisma.Decimal | null | undefined): number | null {
   if (value === null || value === undefined) return null;
@@ -58,87 +63,208 @@ function pickManual<T>(manual: T | null | undefined, calculated: T | null): {
   return { value: null, source: null };
 }
 
-export async function listCommunitiesForCms(): Promise<CommunityListItem[]> {
-  const rows = await prisma.community.findMany({
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      masterCommunity: { select: { name: true } },
-      intelligenceCms: { select: { updatedAt: true } },
-    },
-    orderBy: [{ masterCommunity: { name: "asc" } }, { name: "asc" }],
-  });
+const EMPTY_CALCULATED: CalculatedCommunityMetrics = {
+  averageSalePriceAed: null,
+  averageRentAedYear: null,
+  averagePricePerSqftAed: null,
+  averageRoiPercent: null,
+  unitTypes: [],
+};
 
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    slug: row.slug,
-    masterCommunityName: row.masterCommunity.name,
-    hasCmsProfile: Boolean(row.intelligenceCms),
-    updatedAt: row.intelligenceCms?.updatedAt.toISOString() ?? null,
-  }));
+async function loadCalculatedMetricsSafe(
+  communityId: string
+): Promise<CalculatedCommunityMetrics> {
+  try {
+    return await calculateCommunityMetricsFromListings(communityId);
+  } catch (error) {
+    console.error(
+      "[market-intelligence-cms] calculateCommunityMetricsFromListings:",
+      error
+    );
+    return EMPTY_CALCULATED;
+  }
+}
+
+function buildManualSnapshot(
+  cms: Awaited<ReturnType<typeof loadManualCmsRecord>>
+): CommunityIntelligenceCmsManualSnapshot {
+  const manualUnitMap = new Map(
+    (cms?.unitTypes ?? []).map((row) => [row.unitType, row])
+  );
+
+  return {
+    averageSalePriceAed: decimalToNumber(cms?.averageSalePriceAed),
+    averageRentAedYear: decimalToNumber(cms?.averageRentAedYear),
+    averagePricePerSqftAed: decimalToNumber(cms?.averagePricePerSqftAed),
+    averageRoiPercent: decimalToNumber(cms?.averageRoiPercent),
+    unitTypes: INTELLIGENCE_UNIT_CATEGORIES.map((unitType) => {
+      const row = manualUnitMap.get(unitType);
+      return {
+        unitType,
+        averageSalePriceAed: decimalToNumber(row?.averageSalePriceAed),
+        averageRentAedYear: decimalToNumber(row?.averageRentAedYear),
+        averagePricePerSqftAed: decimalToNumber(row?.averagePricePerSqftAed),
+      };
+    }).filter(
+      (row) =>
+        row.averageSalePriceAed !== null ||
+        row.averageRentAedYear !== null ||
+        row.averagePricePerSqftAed !== null
+    ),
+  };
+}
+
+function buildCalculatedSnapshot(
+  calculated: CalculatedCommunityMetrics
+): CommunityIntelligenceCmsCalculatedSnapshot {
+  const calculatedUnitMap = new Map(
+    calculated.unitTypes.map((row) => [row.unitType, row])
+  );
+
+  return {
+    averageSalePriceAed: calculated.averageSalePriceAed,
+    averageRentAedYear: calculated.averageRentAedYear,
+    averagePricePerSqftAed: calculated.averagePricePerSqftAed,
+    averageRoiPercent: calculated.averageRoiPercent,
+    unitTypes: INTELLIGENCE_UNIT_CATEGORIES.map((unitType) => {
+      const row = calculatedUnitMap.get(unitType);
+      return {
+        unitType,
+        averageSalePriceAed: row?.averageSalePriceAed ?? null,
+        averageRentAedYear: row?.averageRentAedYear ?? null,
+        averagePricePerSqftAed: row?.averagePricePerSqftAed ?? null,
+      };
+    }).filter(
+      (row) =>
+        row.averageSalePriceAed !== null ||
+        row.averageRentAedYear !== null ||
+        row.averagePricePerSqftAed !== null
+    ),
+  };
+}
+
+async function loadManualCmsRecord(communityId: string) {
+  try {
+    return await prisma.communityIntelligenceCms.findUnique({
+      where: { communityId },
+      include: { unitTypes: true },
+    });
+  } catch (error) {
+    console.error("[market-intelligence-cms] loadManualCmsRecord:", error);
+    return null;
+  }
+}
+
+export async function communityExists(communityId: string): Promise<boolean> {
+  try {
+    const row = await prisma.community.findUnique({
+      where: { id: communityId },
+      select: { id: true },
+    });
+    return Boolean(row);
+  } catch {
+    return false;
+  }
+}
+
+export async function listCommunitiesForCms(): Promise<CommunityListItem[]> {
+  try {
+    const rows = await prisma.community.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        masterCommunity: { select: { name: true } },
+        intelligenceCms: { select: { updatedAt: true } },
+      },
+      orderBy: [{ masterCommunity: { name: "asc" } }, { name: "asc" }],
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      masterCommunityName: row.masterCommunity.name,
+      hasCmsProfile: Boolean(row.intelligenceCms),
+      updatedAt: row.intelligenceCms?.updatedAt.toISOString() ?? null,
+    }));
+  } catch (error) {
+    console.error("[market-intelligence-cms] listCommunitiesForCms:", error);
+    return [];
+  }
 }
 
 export async function getCommunityIntelligenceCmsByCommunityId(
   communityId: string
 ): Promise<CommunityIntelligenceCmsRecord | null> {
+  let community: {
+    id: string;
+    name: string;
+    masterCommunity: { name: string };
+  } | null = null;
+
   try {
-    const community = await prisma.community.findUnique({
-    where: { id: communityId },
-    select: {
-      id: true,
-      name: true,
-      masterCommunity: { select: { name: true } },
-      intelligenceCms: {
-        include: { unitTypes: true },
+    community = await prisma.community.findUnique({
+      where: { id: communityId },
+      select: {
+        id: true,
+        name: true,
+        masterCommunity: { select: { name: true } },
       },
-    },
-  });
+    });
+  } catch (error) {
+    console.error("[market-intelligence-cms] community lookup:", error);
+    return null;
+  }
 
   if (!community) return null;
 
-  const calculated = await calculateCommunityMetricsFromListings(communityId);
-  const cms = community.intelligenceCms;
+  const [cms, calculated] = await Promise.all([
+    loadManualCmsRecord(communityId),
+    loadCalculatedMetricsSafe(communityId),
+  ]);
+
+  const manual = buildManualSnapshot(cms);
+  const calculatedSnapshot = buildCalculatedSnapshot(calculated);
 
   const sale = pickManual(
-    decimalToNumber(cms?.averageSalePriceAed),
-    calculated.averageSalePriceAed
+    manual.averageSalePriceAed,
+    calculatedSnapshot.averageSalePriceAed
   );
   const rent = pickManual(
-    decimalToNumber(cms?.averageRentAedYear),
-    calculated.averageRentAedYear
+    manual.averageRentAedYear,
+    calculatedSnapshot.averageRentAedYear
   );
   const psf = pickManual(
-    decimalToNumber(cms?.averagePricePerSqftAed),
-    calculated.averagePricePerSqftAed
+    manual.averagePricePerSqftAed,
+    calculatedSnapshot.averagePricePerSqftAed
   );
   const roi = pickManual(
-    decimalToNumber(cms?.averageRoiPercent),
-    calculated.averageRoiPercent
+    manual.averageRoiPercent,
+    calculatedSnapshot.averageRoiPercent
   );
 
   const manualUnitMap = new Map(
-    (cms?.unitTypes ?? []).map((row) => [row.unitType, row])
+    manual.unitTypes.map((row) => [row.unitType, row])
   );
   const calculatedUnitMap = new Map(
-    calculated.unitTypes.map((row) => [row.unitType, row])
+    calculatedSnapshot.unitTypes.map((row) => [row.unitType, row])
   );
 
   const unitTypes = INTELLIGENCE_UNIT_CATEGORIES.map((unitType) => {
-    const manual = manualUnitMap.get(unitType);
-    const calc = calculatedUnitMap.get(unitType);
+    const manualRow = manualUnitMap.get(unitType);
+    const calcRow = calculatedUnitMap.get(unitType);
     const salePrice = pickManual(
-      decimalToNumber(manual?.averageSalePriceAed),
-      calc?.averageSalePriceAed ?? null
+      manualRow?.averageSalePriceAed ?? null,
+      calcRow?.averageSalePriceAed ?? null
     );
     const rentYear = pickManual(
-      decimalToNumber(manual?.averageRentAedYear),
-      calc?.averageRentAedYear ?? null
+      manualRow?.averageRentAedYear ?? null,
+      calcRow?.averageRentAedYear ?? null
     );
     const pricePsf = pickManual(
-      decimalToNumber(manual?.averagePricePerSqftAed),
-      calc?.averagePricePerSqftAed ?? null
+      manualRow?.averagePricePerSqftAed ?? null,
+      calcRow?.averagePricePerSqftAed ?? null
     );
 
     return {
@@ -147,8 +273,8 @@ export async function getCommunityIntelligenceCmsByCommunityId(
       averageRentAedYear: rentYear.value,
       averagePricePerSqftAed: pricePsf.value,
       isCalculated:
-        !manual &&
-        Boolean(calc) &&
+        !manualRow &&
+        Boolean(calcRow) &&
         salePrice.source !== "manual" &&
         rentYear.source !== "manual" &&
         pricePsf.source !== "manual",
@@ -201,14 +327,10 @@ export async function getCommunityIntelligenceCmsByCommunityId(
       averagePricePerSqftAed: psf.source,
       averageRoiPercent: roi.source,
     },
+    manual,
+    calculated: calculatedSnapshot,
+    hasManualProfile: Boolean(cms),
   };
-  } catch (error) {
-    console.error(
-      "[market-intelligence-cms] getCommunityIntelligenceCmsByCommunityId:",
-      error
-    );
-    return null;
-  }
 }
 
 export async function upsertCommunityIntelligenceCms(
@@ -328,20 +450,32 @@ export async function upsertCommunityIntelligenceCms(
 }
 
 export async function deleteCommunityIntelligenceCms(communityId: string): Promise<void> {
-  await prisma.communityIntelligenceCms.deleteMany({
-    where: { communityId },
-  });
+  try {
+    await prisma.communityIntelligenceCms.deleteMany({
+      where: { communityId },
+    });
+  } catch (error) {
+    console.error("[market-intelligence-cms] deleteCommunityIntelligenceCms:", error);
+    throw error;
+  }
 }
 
 export async function findCommunityIdByName(
   communityName: string
 ): Promise<string | null> {
   try {
-    const row = await prisma.community.findFirst({
+    const byName = await prisma.community.findFirst({
       where: { name: { equals: communityName, mode: "insensitive" } },
       select: { id: true },
     });
-    return row?.id ?? null;
+    if (byName) return byName.id;
+
+    const slug = communityName.trim().toLowerCase().replace(/\s+/g, "-");
+    const bySlug = await prisma.community.findFirst({
+      where: { slug: { equals: slug, mode: "insensitive" } },
+      select: { id: true },
+    });
+    return bySlug?.id ?? null;
   } catch (error) {
     console.error("[market-intelligence-cms] findCommunityIdByName:", error);
     return null;
