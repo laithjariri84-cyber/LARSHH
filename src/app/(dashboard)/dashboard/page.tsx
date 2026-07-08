@@ -1,16 +1,6 @@
 import type { Metadata } from "next";
 
 import {
-  listingTrendData,
-  marketMixData,
-  marketOverview,
-  mockUser,
-  priceIndexData,
-  quickActions,
-  recentListings,
-  recentlyUpdated,
-} from "@/features/dashboard/data/mock-dashboard";
-import {
   ListingTrendChart,
   MarketMixChart,
   PriceIndexChart,
@@ -21,7 +11,11 @@ import { RecentListingsTable } from "@/features/dashboard/components/recent-list
 import { RecentlyUpdated } from "@/features/dashboard/components/recently-updated";
 import { StatCards } from "@/features/dashboard/components/stat-cards";
 import { WelcomeHeader } from "@/features/dashboard/components/welcome-header";
-import { getDashboardStatistics } from "@/server/dashboard";
+import { getShellUser } from "@/lib/auth";
+import {
+  getDashboardPageContent,
+  getDashboardStatistics,
+} from "@/server/dashboard";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -31,40 +25,44 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const stats = await getDashboardStatistics();
+  const [stats, content, shellUser] = await Promise.all([
+    getDashboardStatistics(),
+    getDashboardPageContent(),
+    getShellUser(),
+  ]);
 
   return (
     <div className="larssh-page">
-      <WelcomeHeader name={mockUser.name} />
+      <WelcomeHeader name={shellUser.name} />
 
       <StatCards stats={stats} />
 
-      <MarketOverview cards={marketOverview} />
+      <MarketOverview cards={content.marketOverview} />
 
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <ListingTrendChart
-            data={listingTrendData}
+            data={content.listingTrend}
             title="Listing Volume Trend"
             subtitle="Active listings over the last 6 months"
           />
         </div>
-        <MarketMixChart data={marketMixData} title="Rent vs Sale Mix" />
+        <MarketMixChart data={content.marketMix} title="Rent vs Sale Mix" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
-          <RecentListingsTable listings={recentListings} />
+          <RecentListingsTable listings={content.recentListings} />
         </div>
-        <RecentlyUpdated items={recentlyUpdated} />
+        <RecentlyUpdated items={content.recentlyUpdated} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <PriceIndexChart
-          data={priceIndexData}
+          data={content.priceIndex}
           title="Price Index Movement"
         />
-        <QuickActions actions={quickActions} />
+        <QuickActions actions={content.quickActions} />
       </div>
     </div>
   );

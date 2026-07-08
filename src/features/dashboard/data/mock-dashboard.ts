@@ -2,7 +2,7 @@ export type MarketOverviewCard = {
   title: string;
   value: string;
   subtitle: string;
-  trend: string;
+  trend?: string;
 };
 
 export type ListingRow = {

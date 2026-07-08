@@ -5,10 +5,10 @@ import { isUiOnlyMode } from "@/lib/ui-only";
 
 export default async function HomePage() {
   if (isUiOnlyMode()) {
-    redirect("/intelligence");
+    redirect("/dashboard");
   }
 
   const user = await getUser();
 
-  redirect(user ? "/intelligence" : "/login");
+  redirect(user ? "/dashboard" : "/login");
 }

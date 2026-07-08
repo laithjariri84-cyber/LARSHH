@@ -9,12 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/brand/logo";
 import { LARSSH_BRAND } from "@/lib/brand";
+import { resolveSafeRedirectPath } from "@/lib/auth-redirect";
 import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
+  const redirectTo = resolveSafeRedirectPath(
+    searchParams.get("redirectTo"),
+    "/dashboard"
+  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

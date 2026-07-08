@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { resolveSafeRedirectPath } from "@/lib/auth-redirect";
 import type { SupabaseCookie } from "./types";
 
 export async function updateSession(request: NextRequest) {
@@ -45,7 +46,8 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthRoute) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
+    const redirectTo = request.nextUrl.searchParams.get("redirectTo");
+    redirectUrl.pathname = resolveSafeRedirectPath(redirectTo, "/dashboard");
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -21,20 +23,20 @@ export function RecentListingsTable({ listings }: RecentListingsTableProps) {
         <h2 className="text-lg font-semibold tracking-tight max-md:text-base">
           Recent Listings
         </h2>
-        <button
-          type="button"
+        <Link
+          href="/search"
           className="text-gold min-h-11 text-sm font-medium transition-opacity hover:opacity-80 max-lg:px-2 lg:min-h-0"
         >
           View all
-        </button>
+        </Link>
       </div>
 
-      {/* Mobile cards */}
       <div className="grid gap-3 lg:hidden">
         {listings.map((row) => (
-          <article
+          <Link
             key={row.id}
-            className="paragon-card rounded-xl p-4"
+            href={`/properties/${row.id}`}
+            className="paragon-card rounded-xl p-4 transition-colors hover:bg-white/[0.02]"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -59,11 +61,10 @@ export function RecentListingsTable({ listings }: RecentListingsTableProps) {
               <span className="text-muted-foreground">{row.beds} beds</span>
               <span className="text-muted-foreground truncate">{row.agent}</span>
             </div>
-          </article>
+          </Link>
         ))}
       </div>
 
-      {/* Desktop table — unchanged at lg+ */}
       <div className="paragon-card hidden overflow-hidden rounded-2xl lg:block">
         <div className="larssh-table-scroll">
           <Table>
@@ -85,7 +86,14 @@ export function RecentListingsTable({ listings }: RecentListingsTableProps) {
                   key={row.id}
                   className="border-white/5 transition-colors hover:bg-white/[0.02]"
                 >
-                  <TableCell className="font-medium">{row.community}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/properties/${row.id}`}
+                      className="hover:text-gold transition-colors"
+                    >
+                      {row.community}
+                    </Link>
+                  </TableCell>
                   <TableCell>{row.building}</TableCell>
                   <TableCell>{row.unit}</TableCell>
                   <TableCell>

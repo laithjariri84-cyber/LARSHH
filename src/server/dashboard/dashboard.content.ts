@@ -195,7 +195,7 @@ export async function getDashboardRecentListings(): Promise<DashboardListingRow[
     .filter((property) => property.listings[0])
     .map((property) => {
       const listing = property.listings[0]!;
-      const agentName = listing.agent.user?.fullName ?? "Unassigned";
+      const agentName = listing.agent?.user?.fullName ?? "Unassigned";
 
       return {
         id: property.id,
