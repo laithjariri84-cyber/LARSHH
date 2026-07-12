@@ -69,11 +69,18 @@ export async function syncUserFromSupabase(supabaseUser: SupabaseUser) {
   });
 
   if (isFounder) {
-    await prisma.userRoleAssignment.upsert({
-      where: { userId_role: { userId: user.id, role: "FOUNDER" } },
-      create: { userId: user.id, role: "FOUNDER" },
-      update: {},
-    });
+    try {
+      await prisma.userRoleAssignment.upsert({
+        where: { userId_role: { userId: user.id, role: "FOUNDER" } },
+        create: { userId: user.id, role: "FOUNDER" },
+        update: {},
+      });
+    } catch (error) {
+      console.warn(
+        "[auth] FOUNDER role not persisted in database (email bootstrap still applies):",
+        error instanceof Error ? error.message : error
+      );
+    }
   }
 
   if (isAgent) {

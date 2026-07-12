@@ -95,10 +95,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const record = await getCommunityIntelligenceCmsByCommunityId(communityId);
   if (!record) {
-    return NextResponse.json(
-      { error: "Unable to load community intelligence profile" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Community not found" }, { status: 404 });
   }
 
   return NextResponse.json({ data: record });
@@ -148,8 +145,20 @@ export async function PUT(request: Request, context: RouteContext) {
   } catch (error) {
     console.error("[admin/market-intelligence] PUT failed:", error);
     return NextResponse.json(
-      { error: "Failed to save community intelligence profile" },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error &&
+          error.message.includes("CMS is unavailable")
+            ? error.message
+            : "Failed to save community intelligence profile",
+      },
+      {
+        status:
+          error instanceof Error &&
+          error.message.includes("CMS is unavailable")
+            ? 503
+            : 500,
+      }
     );
   }
 }

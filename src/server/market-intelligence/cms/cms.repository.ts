@@ -1,5 +1,9 @@
 import type { Prisma } from "@prisma/client";
 
+import {
+  isCmsTableAvailable,
+  isMissingCmsTableError,
+} from "@/lib/database/cms-table-available";
 import { prisma } from "@/lib/prisma";
 
 import type {
@@ -15,6 +19,10 @@ import {
   calculateCommunityMetricsFromListings,
   type CalculatedCommunityMetrics,
 } from "./cms.calculated";
+import {
+  communityHasResearchProfile,
+  loadResearchSnapshotForCommunity,
+} from "./cms.research";
 
 function decimalToNumber(value: Prisma.Decimal | null | undefined): number | null {
   if (value === null || value === undefined) return null;
@@ -105,12 +113,7 @@ function buildManualSnapshot(
         averageRentAedYear: decimalToNumber(row?.averageRentAedYear),
         averagePricePerSqftAed: decimalToNumber(row?.averagePricePerSqftAed),
       };
-    }).filter(
-      (row) =>
-        row.averageSalePriceAed !== null ||
-        row.averageRentAedYear !== null ||
-        row.averagePricePerSqftAed !== null
-    ),
+    }),
   };
 }
 
@@ -144,12 +147,20 @@ function buildCalculatedSnapshot(
 }
 
 async function loadManualCmsRecord(communityId: string) {
+  if (!(await isCmsTableAvailable())) {
+    return null;
+  }
+
   try {
     return await prisma.communityIntelligenceCms.findUnique({
       where: { communityId },
       include: { unitTypes: true },
     });
   } catch (error) {
+    if (isMissingCmsTableError(error)) {
+      console.warn("[market-intelligence-cms] CMS table missing on load");
+      return null;
+    }
     console.error("[market-intelligence-cms] loadManualCmsRecord:", error);
     return null;
   }
@@ -169,28 +180,73 @@ export async function communityExists(communityId: string): Promise<boolean> {
 
 export async function listCommunitiesForCms(): Promise<CommunityListItem[]> {
   try {
-    const rows = await prisma.community.findMany({
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        masterCommunity: { select: { name: true } },
-        intelligenceCms: { select: { updatedAt: true } },
-      },
-      orderBy: [{ masterCommunity: { name: "asc" } }, { name: "asc" }],
-    });
+    const cmsAvailable = await isCmsTableAvailable();
+
+    const [rows, researchProfiles, cmsProfiles] = await Promise.all([
+      prisma.community.findMany({
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          masterCommunity: { select: { name: true } },
+        },
+        orderBy: [{ masterCommunity: { name: "asc" } }, { name: "asc" }],
+      }),
+      prisma.communityMarketIntelligence.findMany({
+        select: { communitySlug: true, communityName: true },
+        distinct: ["communitySlug"],
+      }),
+      cmsAvailable
+        ? prisma.communityIntelligenceCms.findMany({
+            select: { communityId: true, updatedAt: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const cmsByCommunityId = new Map(
+      cmsProfiles.map((row) => [row.communityId, row.updatedAt.toISOString()])
+    );
+
+    const researchSlugs = new Set(researchProfiles.map((row) => row.communitySlug));
+    const researchNames = new Set(
+      researchProfiles.map((row) => row.communityName.toLowerCase())
+    );
 
     return rows.map((row) => ({
       id: row.id,
       name: row.name,
       slug: row.slug,
       masterCommunityName: row.masterCommunity.name,
-      hasCmsProfile: Boolean(row.intelligenceCms),
-      updatedAt: row.intelligenceCms?.updatedAt.toISOString() ?? null,
+      hasCmsProfile: cmsByCommunityId.has(row.id),
+      hasResearchProfile:
+        researchSlugs.has(row.slug) ||
+        researchNames.has(row.name.toLowerCase()),
+      updatedAt: cmsByCommunityId.get(row.id) ?? null,
     }));
   } catch (error) {
+    if (isMissingCmsTableError(error)) {
+      console.warn("[market-intelligence-cms] CMS table missing on list");
+      const rows = await prisma.community.findMany({
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          masterCommunity: { select: { name: true } },
+        },
+        orderBy: [{ masterCommunity: { name: "asc" } }, { name: "asc" }],
+      });
+      return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        masterCommunityName: row.masterCommunity.name,
+        hasCmsProfile: false,
+        hasResearchProfile: false,
+        updatedAt: null,
+      }));
+    }
     console.error("[market-intelligence-cms] listCommunitiesForCms:", error);
-    return [];
+    throw error;
   }
 }
 
@@ -200,6 +256,7 @@ export async function getCommunityIntelligenceCmsByCommunityId(
   let community: {
     id: string;
     name: string;
+    slug: string;
     masterCommunity: { name: string };
   } | null = null;
 
@@ -209,6 +266,7 @@ export async function getCommunityIntelligenceCmsByCommunityId(
       select: {
         id: true,
         name: true,
+        slug: true,
         masterCommunity: { select: { name: true } },
       },
     });
@@ -219,9 +277,11 @@ export async function getCommunityIntelligenceCmsByCommunityId(
 
   if (!community) return null;
 
-  const [cms, calculated] = await Promise.all([
+  const [cms, calculated, research, hasResearchProfile] = await Promise.all([
     loadManualCmsRecord(communityId),
     loadCalculatedMetricsSafe(communityId),
+    loadResearchSnapshotForCommunity(community.name, community.slug),
+    communityHasResearchProfile(community.name, community.slug),
   ]);
 
   const manual = buildManualSnapshot(cms);
@@ -319,7 +379,7 @@ export async function getCommunityIntelligenceCmsByCommunityId(
     thingsInvestorsShouldKnow: cms?.thingsInvestorsShouldKnow ?? null,
     updatedByEmail: cms?.updatedByEmail ?? null,
     updatedByName: cms?.updatedByName ?? null,
-    updatedAt: cms?.updatedAt.toISOString() ?? new Date(0).toISOString(),
+    updatedAt: cms?.updatedAt.toISOString() ?? null,
     unitTypes,
     sources: {
       averageSalePriceAed: sale.source,
@@ -329,7 +389,9 @@ export async function getCommunityIntelligenceCmsByCommunityId(
     },
     manual,
     calculated: calculatedSnapshot,
+    research,
     hasManualProfile: Boolean(cms),
+    hasResearchProfile,
   };
 }
 
@@ -338,6 +400,12 @@ export async function upsertCommunityIntelligenceCms(
   input: UpsertCommunityIntelligenceCmsInput,
   updatedBy: { email: string; name: string }
 ): Promise<CommunityIntelligenceCmsRecord> {
+  if (!(await isCmsTableAvailable())) {
+    throw new Error(
+      "Market Intelligence CMS is unavailable. Apply database migrations (community_intelligence_cms)."
+    );
+  }
+
   const unitTypes = input.unitTypes ?? [];
 
   await prisma.$transaction(async (tx) => {
@@ -440,6 +508,20 @@ export async function upsertCommunityIntelligenceCms(
         },
       });
     }
+
+    const savedUnitTypes = new Set(unitTypes.map((unit) => unit.unitType));
+    if (savedUnitTypes.size > 0) {
+      await tx.communityIntelligenceUnitBenchmark.deleteMany({
+        where: {
+          cmsId: cms.id,
+          unitType: { notIn: [...savedUnitTypes] },
+        },
+      });
+    } else {
+      await tx.communityIntelligenceUnitBenchmark.deleteMany({
+        where: { cmsId: cms.id },
+      });
+    }
   });
 
   const record = await getCommunityIntelligenceCmsByCommunityId(communityId);
@@ -450,11 +532,18 @@ export async function upsertCommunityIntelligenceCms(
 }
 
 export async function deleteCommunityIntelligenceCms(communityId: string): Promise<void> {
+  if (!(await isCmsTableAvailable())) {
+    return;
+  }
+
   try {
     await prisma.communityIntelligenceCms.deleteMany({
       where: { communityId },
     });
   } catch (error) {
+    if (isMissingCmsTableError(error)) {
+      return;
+    }
     console.error("[market-intelligence-cms] deleteCommunityIntelligenceCms:", error);
     throw error;
   }

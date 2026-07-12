@@ -25,6 +25,41 @@ async function findUserByEmail(prisma: PrismaClient, email: string) {
   });
 }
 
+async function bootstrapUserFromSupabaseAuth(
+  prisma: PrismaClient,
+  email: string,
+  fullName: string | null
+) {
+  const existing = await findUserByEmail(prisma, email);
+  if (existing) return existing;
+
+  const authRows = await prisma.$queryRaw<Array<{ id: string; email: string }>>`
+    SELECT id, email
+    FROM auth.users
+    WHERE lower(email) = lower(${email})
+    LIMIT 1
+  `;
+
+  const authUser = authRows[0];
+  if (!authUser) return null;
+
+  return prisma.user.upsert({
+    where: { id: authUser.id },
+    create: {
+      id: authUser.id,
+      organizationId: DEFAULT_ORG_ID,
+      email: email.toLowerCase(),
+      fullName,
+      status: "ACTIVE",
+    },
+    update: {
+      email: email.toLowerCase(),
+      ...(fullName ? { fullName } : {}),
+    },
+    include: { agent: true, roleAssignments: true },
+  });
+}
+
 async function ensureRole(
   prisma: PrismaClient,
   userId: string,
@@ -95,17 +130,32 @@ export async function seedRoleSystem(
     update: {},
   });
 
-  const founderUser = await findUserByEmail(prisma, FOUNDER_EMAIL);
-  const agentUser = await findUserByEmail(prisma, AGENT_EMAIL);
+  const founderUser =
+    (await findUserByEmail(prisma, FOUNDER_EMAIL)) ??
+    (await bootstrapUserFromSupabaseAuth(
+      prisma,
+      FOUNDER_EMAIL,
+      FOUNDER_DISPLAY_NAME
+    ));
+  const agentUser =
+    (await findUserByEmail(prisma, AGENT_EMAIL)) ??
+    (await bootstrapUserFromSupabaseAuth(prisma, AGENT_EMAIL, null));
 
   if (founderUser) {
     result.founderUserId = founderUser.id;
-    await ensureRole(prisma, founderUser.id, "FOUNDER");
+    try {
+      await ensureRole(prisma, founderUser.id, "FOUNDER");
+    } catch (error) {
+      console.warn(
+        `[roles] Could not persist FOUNDER role in database (email bootstrap still applies):`,
+        error instanceof Error ? error.message : error
+      );
+    }
     await prisma.user.update({
       where: { id: founderUser.id },
       data: { fullName: FOUNDER_DISPLAY_NAME },
     });
-    console.log(`[roles] FOUNDER role assigned to ${FOUNDER_EMAIL}`);
+    console.log(`[roles] Founder account linked to ${FOUNDER_EMAIL}`);
   } else {
     console.warn(
       `[roles] Founder user not found (${FOUNDER_EMAIL}). Sign in once so Supabase sync creates the user row, then re-run seed.`

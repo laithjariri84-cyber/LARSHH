@@ -2,20 +2,26 @@ import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
-  directPrisma: PrismaClient | undefined;
 };
 
-function withConnectionLimit(url: string): string {
-  const limit = process.env.PRISMA_CONNECTION_LIMIT?.trim();
-  if (!limit) {
-    return url;
-  }
+/** Supabase session pooler allows very few connections per client/process. */
+const DEFAULT_CONNECTION_LIMIT = "1";
 
+function withPoolParams(url: string): string {
   try {
     const parsed = new URL(url);
+    const limit =
+      process.env.PRISMA_CONNECTION_LIMIT?.trim() || DEFAULT_CONNECTION_LIMIT;
+
     if (!parsed.searchParams.has("connection_limit")) {
       parsed.searchParams.set("connection_limit", limit);
     }
+
+    // Transaction pooler (6543) requires pgbouncer mode for Prisma.
+    if (parsed.port === "6543" && !parsed.searchParams.has("pgbouncer")) {
+      parsed.searchParams.set("pgbouncer", "true");
+    }
+
     return parsed.toString();
   } catch {
     return url;
@@ -26,28 +32,18 @@ function resolveDatabaseUrl(): string {
   const url = process.env.DATABASE_URL?.trim();
   if (!url) {
     throw new Error(
-      "DATABASE_URL is not set. Define it in .env (see .env.example). " +
-        "If .env.local also defines DATABASE_URL, it overrides .env in Next.js."
+      "DATABASE_URL is not set. Define it in .env.local (see .env.example). " +
+        "Use the Supabase transaction pooler on port 6543 with ?pgbouncer=true."
     );
   }
-  return withConnectionLimit(url);
+  return withPoolParams(url);
 }
 
-function resolveDirectUrl(): string | undefined {
-  const direct = process.env.DIRECT_URL?.trim();
-  if (direct) {
-    return withConnectionLimit(direct);
-  }
-
-  const databaseUrl = process.env.DATABASE_URL?.trim();
-  return databaseUrl ? withConnectionLimit(databaseUrl) : undefined;
-}
-
-function createPrismaClient(databaseUrl: string): PrismaClient {
+function createPrismaClient(): PrismaClient {
   return new PrismaClient({
     datasources: {
       db: {
-        url: databaseUrl,
+        url: resolveDatabaseUrl(),
       },
     },
     log:
@@ -55,30 +51,25 @@ function createPrismaClient(databaseUrl: string): PrismaClient {
   });
 }
 
-export const prisma =
-  globalForPrisma.prisma ?? createPrismaClient(resolveDatabaseUrl());
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+globalForPrisma.prisma = prisma;
 
 /**
- * Session/direct connection for interactive transactions (imports, long writes).
- * Uses DIRECT_URL when set; otherwise falls back to DATABASE_URL.
+ * @deprecated Use `prisma` — single shared client only.
+ * Import adapter kept this alias for long transactions on the same pool.
  */
 export function getDirectPrisma(): PrismaClient {
-  if (globalForPrisma.directPrisma) {
-    return globalForPrisma.directPrisma;
-  }
-
-  const directUrl = resolveDirectUrl() ?? resolveDatabaseUrl();
-  const client = createPrismaClient(directUrl);
-  globalForPrisma.directPrisma = client;
-  return client;
+  return prisma;
 }
-
-globalForPrisma.prisma = prisma;
 
 export function getDatabaseUrl(): string {
   return resolveDatabaseUrl();
 }
 
 export function getDirectDatabaseUrl(): string {
-  return resolveDirectUrl() ?? resolveDatabaseUrl();
+  const direct = process.env.DIRECT_URL?.trim();
+  if (direct) {
+    return withPoolParams(direct);
+  }
+  return resolveDatabaseUrl();
 }

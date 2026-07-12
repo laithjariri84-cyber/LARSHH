@@ -70,7 +70,7 @@ export type CommunityIntelligenceCmsRecord = {
   thingsInvestorsShouldKnow: string | null;
   updatedByEmail: string | null;
   updatedByName: string | null;
-  updatedAt: string;
+  updatedAt: string | null;
   unitTypes: CommunityIntelligenceUnitBenchmarkRecord[];
   /** Fields resolved from CMS manual values or listing calculations. */
   sources: {
@@ -83,7 +83,10 @@ export type CommunityIntelligenceCmsRecord = {
   manual: CommunityIntelligenceCmsManualSnapshot;
   /** Listing-calculated benchmarks for admin hints and public fallback. */
   calculated: CommunityIntelligenceCmsCalculatedSnapshot;
+  /** CommunityMarketIntelligence research DB values for pre-filling the editor. */
+  research: CommunityIntelligenceCmsManualSnapshot | null;
   hasManualProfile: boolean;
+  hasResearchProfile: boolean;
 };
 
 export type CommunityListItem = {
@@ -92,6 +95,7 @@ export type CommunityListItem = {
   slug: string;
   masterCommunityName: string;
   hasCmsProfile: boolean;
+  hasResearchProfile: boolean;
   updatedAt: string | null;
 };
 

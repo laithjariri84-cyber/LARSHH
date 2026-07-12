@@ -35,12 +35,12 @@ type MarketIntelligenceExperienceProps = {
 };
 
 function formatAed(value: number | null | undefined) {
-  if (value === null || value === undefined) return "Market data not available";
+  if (value === null || value === undefined) return "Not yet researched";
   return formatCurrency(value, "AED");
 }
 
 function formatPercent(value: number | null | undefined) {
-  if (value === null || value === undefined) return "Market data not available";
+  if (value === null || value === undefined) return "Not yet researched";
   return `${Math.round(value * 10) / 10}%`;
 }
 
@@ -81,6 +81,25 @@ export function MarketIntelligenceExperience({
       [profile]
     );
   }, [summaries, communitySlug, bedroomFilter]);
+
+  if (summaries.length === 0) {
+    return (
+      <div className="space-y-8 p-4 md:p-6 lg:p-8">
+        <header className="animate-slide-up">
+          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+            Market Intelligence
+          </h1>
+          <p className="text-muted-foreground mt-3 max-w-3xl text-sm leading-7 md:text-base">
+            Community research profiles appear here after the founder saves manual
+            market intelligence in Admin.
+          </p>
+        </header>
+        <p className="text-muted-foreground rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm">
+          Not yet researched
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 p-4 md:p-6 lg:p-8">
@@ -169,7 +188,7 @@ export function MarketIntelligenceExperience({
       >
         {!selectedSummary?.available ? (
           <p className="text-muted-foreground rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm">
-            Market data not available
+            Not yet researched
           </p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -190,7 +209,7 @@ export function MarketIntelligenceExperience({
               value={
                 selectedSummary.averageRent !== null
                   ? `${formatAed(selectedSummary.averageRent)}/yr`
-                  : "Market data not available"
+                  : "Not yet researched"
               }
             />
             <MetricCard
@@ -199,7 +218,7 @@ export function MarketIntelligenceExperience({
                 formatRentRange(
                   selectedSummary.furnishedRentMin,
                   selectedSummary.furnishedRentMax
-                ) ?? "Market data not available"
+                ) ?? "Not yet researched"
               }
             />
             <MetricCard
@@ -208,7 +227,7 @@ export function MarketIntelligenceExperience({
                 formatRentRange(
                   selectedSummary.unfurnishedRentMin,
                   selectedSummary.unfurnishedRentMax
-                ) ?? "Market data not available"
+                ) ?? "Not yet researched"
               }
             />
             <MetricCard
@@ -224,7 +243,7 @@ export function MarketIntelligenceExperience({
               value={
                 selectedSummary.demand
                   ? formatLabel(selectedSummary.demand)
-                  : "Market data not available"
+                  : "Not yet researched"
               }
             />
             <MetricCard
@@ -232,7 +251,7 @@ export function MarketIntelligenceExperience({
               value={
                 selectedSummary.confidence !== null
                   ? `${Math.round(selectedSummary.confidence)}%`
-                  : "Market data not available"
+                  : "Not yet researched"
               }
             />
           </div>
@@ -256,7 +275,7 @@ export function MarketIntelligenceExperience({
               <p className="text-muted-foreground mt-1 text-xs">
                 {summary.available
                   ? `${formatAed(summary.averageSalePrice)} avg sale · ${formatPercent(summary.roi)} ROI`
-                  : "Market data not available"}
+                  : "Not yet researched"}
               </p>
               {summary.isEstimated ? (
                 <Badge

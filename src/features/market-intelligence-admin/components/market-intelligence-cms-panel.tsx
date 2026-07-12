@@ -96,8 +96,14 @@ function snapshotDraft(draft: Draft): string {
 }
 
 function buildDraftFromRecord(data: CommunityIntelligenceCmsRecord): Draft {
+  const source = data.hasManualProfile
+    ? data.manual
+    : (data.research ?? data.calculated);
+
   const manualUnits = INTELLIGENCE_UNIT_CATEGORIES.map((unitType) => {
-    const row = data.manual.unitTypes.find((item) => item.unitType === unitType);
+    const manualRow = data.manual.unitTypes.find((item) => item.unitType === unitType);
+    const sourceRow = source.unitTypes.find((item) => item.unitType === unitType);
+    const row = data.hasManualProfile ? manualRow : (manualRow ?? sourceRow);
     return {
       unitType,
       averageSalePriceAed: row?.averageSalePriceAed ?? null,
@@ -107,16 +113,36 @@ function buildDraftFromRecord(data: CommunityIntelligenceCmsRecord): Draft {
     };
   });
 
+  function pickManualField(
+    manualValue: number | null | undefined,
+    fallback: number | null | undefined
+  ): number | null {
+    if (data.hasManualProfile) return manualValue ?? null;
+    return manualValue ?? fallback ?? null;
+  }
+
   return {
     communityName: data.communityName,
     overview: data.overview,
     investmentSummary: data.investmentSummary,
     bestFor: data.bestFor,
     marketNotes: data.marketNotes,
-    averageSalePriceAed: data.manual.averageSalePriceAed,
-    averageRentAedYear: data.manual.averageRentAedYear,
-    averagePricePerSqftAed: data.manual.averagePricePerSqftAed,
-    averageRoiPercent: data.manual.averageRoiPercent,
+    averageSalePriceAed: pickManualField(
+      data.manual.averageSalePriceAed,
+      source.averageSalePriceAed
+    ),
+    averageRentAedYear: pickManualField(
+      data.manual.averageRentAedYear,
+      source.averageRentAedYear
+    ),
+    averagePricePerSqftAed: pickManualField(
+      data.manual.averagePricePerSqftAed,
+      source.averagePricePerSqftAed
+    ),
+    averageRoiPercent: pickManualField(
+      data.manual.averageRoiPercent,
+      source.averageRoiPercent
+    ),
     capitalAppreciationPercent: data.capitalAppreciationPercent,
     rentalDemand: data.rentalDemand,
     occupancyRatePercent: data.occupancyRatePercent,
@@ -472,6 +498,10 @@ export function MarketIntelligenceCmsPanel() {
                 {community.hasCmsProfile ? (
                   <span className="bg-gold-muted text-gold shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase">
                     CMS
+                  </span>
+                ) : community.hasResearchProfile ? (
+                  <span className="border-border text-muted-foreground shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase">
+                    Research
                   </span>
                 ) : null}
               </div>
