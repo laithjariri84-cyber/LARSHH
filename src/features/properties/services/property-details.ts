@@ -53,26 +53,24 @@ async function loadPropertyDetailsById(
   const askingRent = pickListingPrice(property, ListingType.RENT);
   const askingSale = pickListingPrice(property, ListingType.SALE);
 
-  const [similarRecords, marketIntelligence] = await Promise.all([
-    getSimilarPropertiesFromDb({
-      propertyId: property.id,
-      communityId: property.communityId,
-      propertyType: property.propertyType,
-      bedrooms: property.bedrooms,
-      areaSqft: property.areaSqft ? Number(property.areaSqft) : null,
-      askingPrice,
-      listingType,
-    }),
-    computePropertyMarketIntelligence({
-      communityName,
-      bedrooms: property.bedrooms,
-      listingType,
-      furnishing: property.furnishing,
-      askingPrice,
-      askingRent,
-      askingSale,
-    }),
-  ]);
+  const similarRecords = await getSimilarPropertiesFromDb({
+    propertyId: property.id,
+    communityId: property.communityId,
+    propertyType: property.propertyType,
+    bedrooms: property.bedrooms,
+    areaSqft: property.areaSqft ? Number(property.areaSqft) : null,
+    askingPrice,
+    listingType,
+  });
+  const marketIntelligence = await computePropertyMarketIntelligence({
+    communityName,
+    bedrooms: property.bedrooms,
+    listingType,
+    furnishing: property.furnishing,
+    askingPrice,
+    askingRent,
+    askingSale,
+  });
 
   const viewModel = mapPropertyToDetailsViewModel(
     property,

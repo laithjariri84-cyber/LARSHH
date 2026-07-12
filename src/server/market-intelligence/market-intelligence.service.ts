@@ -5,10 +5,6 @@ import {
   normalizeBedroomCount,
   resolveCommunitySlug,
 } from "./community-matcher";
-import {
-  findCommunityIdByName,
-  getCommunityIntelligenceCmsByCommunityId,
-} from "./cms";
 import { findMarketProfile } from "./market-intelligence.repository";
 import type {
   MarketRecommendation,
@@ -120,92 +116,14 @@ export async function computePropertyMarketIntelligence(
 ): Promise<PropertyMarketIntelligence | null> {
   const communitySlug = resolveCommunitySlug(input.communityName);
   if (!communitySlug) return null;
+
   const bedroomCount = normalizeBedroomCount(input.bedrooms);
-
-  const communityId = await findCommunityIdByName(input.communityName);
-  const cms = communityId
-    ? await getCommunityIntelligenceCmsByCommunityId(communityId)
-    : null;
-
   const profile = await findMarketProfile(communitySlug, bedroomCount);
-
-  const cmsUnit = cms?.unitTypes.find((row) => {
-    if (bedroomCount === 0) return row.unitType === "STUDIO";
-    if (bedroomCount === 1) return row.unitType === "ONE_BEDROOM";
-    if (bedroomCount === 2) return row.unitType === "TWO_BEDROOM";
-    if (bedroomCount === 3) return row.unitType === "THREE_BEDROOM";
-    if (bedroomCount >= 4) return row.unitType === "FOUR_BEDROOM";
-    return false;
-  });
-
-  const effectiveSaleAvg =
-    cmsUnit?.averageSalePriceAed ??
-    cms?.averageSalePriceAed ??
-    profile?.saleAskingAvg ??
-    null;
-  const effectiveRentAvg =
-    cmsUnit?.averageRentAedYear ??
-    cms?.averageRentAedYear ??
-    (profile
-      ? isFurnished(input.furnishing)
-        ? profile.rentFurnishedAvg
-        : profile.rentUnfurnishedAvg
-      : null);
-  const effectivePsf =
-    cmsUnit?.averagePricePerSqftAed ??
-    cms?.averagePricePerSqftAed ??
-    profile?.averagePricePerSqft ??
-    null;
-  const effectiveRoi =
-    cms?.averageRoiPercent ?? profile?.estimatedRoiPercent ?? null;
-
-  if (!profile && !cms) return null;
-
-  const mergedProfile = profile
-    ? {
-        ...profile,
-        saleAskingAvg: effectiveSaleAvg ?? profile.saleAskingAvg,
-        rentFurnishedAvg: effectiveRentAvg ?? profile.rentFurnishedAvg,
-        rentUnfurnishedAvg: effectiveRentAvg ?? profile.rentUnfurnishedAvg,
-        averagePricePerSqft: effectivePsf ?? profile.averagePricePerSqft,
-        estimatedRoiPercent: effectiveRoi ?? profile.estimatedRoiPercent,
-        demand: cms?.rentalDemand ?? profile.demand,
-        communityName: cms?.communityName ?? profile.communityName,
-        notes: cms?.marketNotes ?? profile.notes,
-      }
-    : {
-        id: cms!.communityId,
-        communitySlug,
-        communityName: cms!.communityName,
-        bedroomCount,
-        rentFurnishedMin: effectiveRentAvg,
-        rentFurnishedAvg: effectiveRentAvg,
-        rentFurnishedMax: effectiveRentAvg,
-        rentFurnishedEstimated: cmsUnit?.isCalculated ?? true,
-        rentUnfurnishedMin: effectiveRentAvg,
-        rentUnfurnishedAvg: effectiveRentAvg,
-        rentUnfurnishedMax: effectiveRentAvg,
-        rentUnfurnishedEstimated: cmsUnit?.isCalculated ?? true,
-        saleAskingLowest: effectiveSaleAvg,
-        saleAskingAvg: effectiveSaleAvg,
-        saleAskingHighest: effectiveSaleAvg,
-        saleAskingEstimated: cmsUnit?.isCalculated ?? true,
-        saleSoldLowest: null,
-        saleSoldAvg: null,
-        saleSoldHighest: null,
-        saleSoldEstimated: true,
-        averageSizeSqft: null,
-        averagePricePerSqft: effectivePsf,
-        estimatedRoiPercent: effectiveRoi,
-        demand: cms?.rentalDemand ?? null,
-        confidencePercent: null,
-        isEstimated: cmsUnit?.isCalculated ?? true,
-        notes: cms?.marketNotes ?? null,
-      };
+  if (!profile) return null;
 
   const currentAskingPrice = resolveCurrentAskingPrice(input);
-  const marketRange = resolveMarketRange(input, mergedProfile);
-  const averageRent = resolveAverageRent(mergedProfile, input.furnishing);
+  const marketRange = resolveMarketRange(input, profile);
+  const averageRent = resolveAverageRent(profile, input.furnishing);
 
   const differenceFromMarketPercent =
     currentAskingPrice !== null && marketRange.average
@@ -214,17 +132,17 @@ export async function computePropertyMarketIntelligence(
 
   const recommendation = classifyRecommendation(differenceFromMarketPercent);
   const estimatedYieldPercent =
-    mergedProfile.estimatedRoiPercent ??
-    (averageRent.value && mergedProfile.saleAskingAvg
-      ? Math.round((averageRent.value / mergedProfile.saleAskingAvg) * 10000) / 100
+    profile.estimatedRoiPercent ??
+    (averageRent.value && profile.saleAskingAvg
+      ? Math.round((averageRent.value / profile.saleAskingAvg) * 10000) / 100
       : null);
 
   return {
-    communityName: mergedProfile.communityName,
-    communitySlug: mergedProfile.communitySlug,
+    communityName: profile.communityName,
+    communitySlug: profile.communitySlug,
     bedroomLabel: bedroomLabel(bedroomCount),
     currency: "AED",
-    isEstimated: mergedProfile.isEstimated,
+    isEstimated: profile.isEstimated,
     currentAskingPrice,
     marketRangeLow: marketRange.low,
     marketRangeHigh: marketRange.high,
@@ -239,17 +157,17 @@ export async function computePropertyMarketIntelligence(
           : differenceFromMarketPercent > 0.5
             ? "above"
             : "at",
-    estimatedRoiPercent: mergedProfile.estimatedRoiPercent,
+    estimatedRoiPercent: profile.estimatedRoiPercent,
     averageRent: averageRent.value,
     averageRentEstimated: averageRent.estimated,
     estimatedYieldPercent,
-    averagePricePerSqft: mergedProfile.averagePricePerSqft,
-    demand: mergedProfile.demand,
-    confidencePercent: mergedProfile.confidencePercent,
+    averagePricePerSqft: profile.averagePricePerSqft,
+    demand: profile.demand,
+    confidencePercent: profile.confidencePercent,
     recommendation: recommendation?.recommendation ?? null,
     recommendationTone: recommendation?.tone ?? null,
     listingType: input.listingType,
     furnishing: input.furnishing,
-    profileNotes: mergedProfile.notes,
+    profileNotes: profile.notes,
   };
 }

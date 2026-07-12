@@ -57,7 +57,6 @@ export async function PATCH(request: Request, context: RouteContext) {
   const profile = await updateMarketProfile(id, parsed.data);
   revalidateTag(CACHE_TAGS.marketProfiles);
   revalidateTag(CACHE_TAGS.marketRoiProfiles);
-  revalidateTag(CACHE_TAGS.communityIntelligenceCms);
 
   return NextResponse.json({ data: profile });
 }

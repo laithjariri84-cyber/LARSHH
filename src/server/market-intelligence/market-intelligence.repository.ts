@@ -86,8 +86,13 @@ export async function listMarketProfiles(): Promise<CommunityMarketProfileRecord
   try {
     return await cacheMarketProfiles(fetchMarketProfilesFromDb);
   } catch (error) {
-    console.error("[market-intelligence] listMarketProfiles:", error);
-    return [];
+    console.error("[market-intelligence] listMarketProfiles cache failed:", error);
+    try {
+      return await fetchMarketProfilesFromDb();
+    } catch (dbError) {
+      console.error("[market-intelligence] listMarketProfiles:", dbError);
+      return [];
+    }
   }
 }
 
@@ -113,8 +118,16 @@ export async function listMarketRoiProfiles(): Promise<MarketRoiProfile[]> {
   try {
     return await cacheMarketRoiProfiles(fetchMarketRoiProfilesFromDb);
   } catch (error) {
-    console.error("[market-intelligence] listMarketRoiProfiles:", error);
-    return [];
+    console.error(
+      "[market-intelligence] listMarketRoiProfiles cache failed:",
+      error
+    );
+    try {
+      return await fetchMarketRoiProfilesFromDb();
+    } catch (dbError) {
+      console.error("[market-intelligence] listMarketRoiProfiles:", dbError);
+      return [];
+    }
   }
 }
 

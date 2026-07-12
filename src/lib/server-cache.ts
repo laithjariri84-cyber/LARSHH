@@ -4,7 +4,6 @@ import { unstable_cache } from "next/cache";
 export const CACHE_TAGS = {
   marketProfiles: "market-profiles",
   marketRoiProfiles: "market-roi-profiles",
-  communityIntelligenceCms: "community-intelligence-cms",
   communities: "communities",
   buildings: "buildings",
   dashboardMetrics: "dashboard-metrics",

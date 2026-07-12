@@ -28,9 +28,7 @@ import type {
   ResidentialProject,
 } from "../types";
 import type { CommunityMarketSummary } from "@/lib/market-intelligence/summary";
-import type { CommunityIntelligenceCmsRecord } from "@/server/market-intelligence/cms";
 
-import { mergeCmsIntoCommunityIntelligence } from "../lib/cms-intelligence-merge";
 import { CommunityIntelligenceHero } from "./community-intelligence-hero";
 import { IntelligenceMetricsRow } from "./intelligence-metrics-row";
 import { IntelligenceSection } from "./intelligence-section";
@@ -60,26 +58,21 @@ type CommunityIntelligenceViewProps = {
   master: MasterCommunity;
   project: ResidentialProject;
   marketSummary: CommunityMarketSummary | null;
-  cmsProfile?: CommunityIntelligenceCmsRecord | null;
 };
 
 export function CommunityIntelligenceView({
   master,
   project,
   marketSummary,
-  cmsProfile = null,
 }: CommunityIntelligenceViewProps) {
   const marketMetrics = buildMarketMetricsFromSummary(marketSummary);
-  const intelligence: CommunityIntelligence = mergeCmsIntoCommunityIntelligence(
-    {
-      ...project.intelligence,
-      averageRent: marketMetrics.averageRent,
-      averageSale: marketMetrics.averageSale,
-      roi: marketMetrics.roi,
-      pricePerSqft: marketMetrics.pricePerSqft,
-    },
-    cmsProfile
-  );
+  const intelligence: CommunityIntelligence = {
+    ...project.intelligence,
+    averageRent: marketMetrics.averageRent,
+    averageSale: marketMetrics.averageSale,
+    roi: marketMetrics.roi,
+    pricePerSqft: marketMetrics.pricePerSqft,
+  };
 
   return (
     <div className="space-y-8 p-4 md:p-6 lg:p-8">

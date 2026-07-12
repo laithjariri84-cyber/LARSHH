@@ -2,14 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { CommunityIntelligenceView } from "@/features/communities/components/community-intelligence-view";
-import {
-  getProjectBySlugs,
-} from "@/features/communities/lib/community-registry";
+import { getProjectBySlugs } from "@/features/communities/lib/community-registry";
 import { getCommunityMarketSummaryByName } from "@/server/market-intelligence";
-import {
-  findCommunityIdByName,
-  getCommunityIntelligenceCmsByCommunityId,
-} from "@/server/market-intelligence/cms";
 
 type CommunityIntelligencePageProps = {
   params: Promise<{
@@ -46,17 +40,12 @@ export default async function CommunityIntelligencePage({
   }
 
   const marketSummary = await getCommunityMarketSummaryByName(match.project.name);
-  const communityId = await findCommunityIdByName(match.project.name);
-  const cmsProfile = communityId
-    ? await getCommunityIntelligenceCmsByCommunityId(communityId)
-    : null;
 
   return (
     <CommunityIntelligenceView
       master={match.master}
       project={match.project}
       marketSummary={marketSummary}
-      cmsProfile={cmsProfile}
     />
   );
 }

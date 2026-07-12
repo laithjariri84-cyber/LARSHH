@@ -1,4 +1,4 @@
-import { MarketIntelligenceCmsPanel } from "@/features/market-intelligence-admin/components/market-intelligence-cms-panel";
+import { MarketIntelligenceAdminPanel } from "@/features/market-intelligence-admin/components/market-intelligence-admin-panel";
 import { ForbiddenPanel } from "@/components/auth/forbidden-panel";
 import { isFounder } from "@/lib/auth/session";
 
@@ -12,7 +12,7 @@ export default async function AdminMarketIntelligencePage() {
   const allowed = await isFounder();
   if (!allowed) {
     return (
-      <ForbiddenPanel message="Only the Founder can manage Market Intelligence CMS profiles." />
+      <ForbiddenPanel message="Only the Founder can manage Market Intelligence profiles." />
     );
   }
 
@@ -26,13 +26,13 @@ export default async function AdminMarketIntelligencePage() {
           Market Intelligence
         </h1>
         <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-relaxed">
-          Manage community intelligence profiles for LARSSH. All currency values
-          are stored and displayed in AED. Changes propagate across property
-          details, community pages, and market analytics.
+          Edit community market intelligence profiles directly. All currency values
+          are stored and displayed in AED. Saved changes appear immediately on the
+          public Market Intelligence page.
         </p>
       </div>
 
-      <MarketIntelligenceCmsPanel />
+      <MarketIntelligenceAdminPanel />
     </div>
   );
 }

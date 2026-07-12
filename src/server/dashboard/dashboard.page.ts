@@ -59,21 +59,12 @@ export async function getDashboardPageContent(): Promise<DashboardPageContent> {
 
   try {
     const scope = await getDashboardQueryScope();
-    const [
-      recentListingsRows,
-      recentlyUpdatedRows,
-      marketOverviewCards,
-      listingTrend,
-      marketMix,
-      priceIndex,
-    ] = await Promise.all([
-      getDashboardRecentListings(scope),
-      getDashboardRecentlyUpdated(scope),
-      getDashboardMarketOverview(),
-      getDashboardListingTrend(scope),
-      getDashboardMarketMix(scope),
-      getDashboardPriceIndex(scope),
-    ]);
+    const recentListingsRows = await getDashboardRecentListings(scope);
+    const recentlyUpdatedRows = await getDashboardRecentlyUpdated(scope);
+    const marketOverviewCards = await getDashboardMarketOverview();
+    const listingTrend = await getDashboardListingTrend(scope);
+    const marketMix = await getDashboardMarketMix(scope);
+    const priceIndex = await getDashboardPriceIndex(scope);
 
     return {
       recentListings: recentListingsRows,

@@ -91,24 +91,22 @@ export async function getDashboardMarketMix(
 ): Promise<DashboardChartPoint[]> {
   const resolvedScope = await resolveScope(scope);
   const agentFilter = listingScopeWhere(resolvedScope);
-  const [rentals, sales] = await Promise.all([
-    prisma.listing.count({
-      where: {
-        deletedAt: null,
-        listingType: ListingType.RENT,
-        status: ListingStatus.ACTIVE,
-        ...agentFilter,
-      },
-    }),
-    prisma.listing.count({
-      where: {
-        deletedAt: null,
-        listingType: ListingType.SALE,
-        status: ListingStatus.ACTIVE,
-        ...agentFilter,
-      },
-    }),
-  ]);
+  const rentals = await prisma.listing.count({
+    where: {
+      deletedAt: null,
+      listingType: ListingType.RENT,
+      status: ListingStatus.ACTIVE,
+      ...agentFilter,
+    },
+  });
+  const sales = await prisma.listing.count({
+    where: {
+      deletedAt: null,
+      listingType: ListingType.SALE,
+      status: ListingStatus.ACTIVE,
+      ...agentFilter,
+    },
+  });
 
   return [
     { label: "Rentals", value: rentals },
@@ -119,32 +117,42 @@ export async function getDashboardMarketMix(
 export async function getDashboardMarketOverview(): Promise<
   DashboardMarketOverviewCard[]
 > {
-  const summaries = await listCommunityMarketSummaries();
+  const unavailableCards: DashboardMarketOverviewCard[] = [
+    {
+      title: "Average Sale Price",
+      value: "Market data not available",
+      subtitle: "Across seeded communities",
+    },
+    {
+      title: "Average Rent",
+      value: "Market data not available",
+      subtitle: "Annual rent benchmark",
+    },
+    {
+      title: "Average ROI",
+      value: "Market data not available",
+      subtitle: "Estimated gross yield",
+    },
+    {
+      title: "Average Confidence",
+      value: "Market data not available",
+      subtitle: "Research conviction score",
+    },
+  ];
+
+  let summaries: Awaited<ReturnType<typeof listCommunityMarketSummaries>> = [];
+
+  try {
+    summaries = await listCommunityMarketSummaries();
+  } catch (error) {
+    console.error("[dashboard] getDashboardMarketOverview:", error);
+    return unavailableCards;
+  }
+
   const available = summaries.filter((summary) => summary.available);
 
   if (available.length === 0) {
-    return [
-      {
-        title: "Average Sale Price",
-        value: "Market data not available",
-        subtitle: "Across seeded communities",
-      },
-      {
-        title: "Average Rent",
-        value: "Market data not available",
-        subtitle: "Annual rent benchmark",
-      },
-      {
-        title: "Average ROI",
-        value: "Market data not available",
-        subtitle: "Estimated gross yield",
-      },
-      {
-        title: "Average Confidence",
-        value: "Market data not available",
-        subtitle: "Research conviction score",
-      },
-    ];
+    return unavailableCards;
   }
 
   const avg = (values: Array<number | null>) => {

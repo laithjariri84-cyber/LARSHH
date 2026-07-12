@@ -142,10 +142,9 @@ export class ImportService {
       .map((r) => r.normalized.pfExpertReference)
       .filter((ref): ref is string => Boolean(ref));
 
-    const [duplicateCodes, duplicateRefs] = await Promise.all([
-      prismaImportAdapter.findDuplicatePropertyCodes(codes),
-      prismaImportAdapter.findDuplicatePfExpertReferences(refs),
-    ]);
+    const duplicateCodes = await prismaImportAdapter.findDuplicatePropertyCodes(codes);
+    const duplicateRefs =
+      await prismaImportAdapter.findDuplicatePfExpertReferences(refs);
 
     const newListings: ImportPreviewRow[] = [];
     const duplicateListings: ImportPreviewRow[] = [];
@@ -181,10 +180,9 @@ export class ImportService {
       .map((r) => r.pfExpertReference)
       .filter((ref): ref is string => Boolean(ref));
 
-    const [duplicateCodes, duplicateRefs] = await Promise.all([
-      prismaImportAdapter.findDuplicatePropertyCodes(codes),
-      prismaImportAdapter.findDuplicatePfExpertReferences(refs),
-    ]);
+    const duplicateCodes = await prismaImportAdapter.findDuplicatePropertyCodes(codes);
+    const duplicateRefs =
+      await prismaImportAdapter.findDuplicatePfExpertReferences(refs);
 
     const toImport = input.rows.filter((row) => {
       const ref = row.pfExpertReference ?? row.propertyCode;

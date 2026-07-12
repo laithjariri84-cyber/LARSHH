@@ -34,6 +34,7 @@ export function MarketIntelligenceAdminPanel() {
   const [drafts, setDrafts] = useState<DraftState>({});
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [selectedCommunity, setSelectedCommunity] = useState<string>("all");
 
   const loadProfiles = useCallback(async () => {
     setLoading(true);
@@ -61,6 +62,16 @@ export function MarketIntelligenceAdminPanel() {
     }
     return Array.from(map.entries());
   }, [profiles]);
+
+  const communityNames = useMemo(
+    () => grouped.map(([name]) => name).sort((a, b) => a.localeCompare(b)),
+    [grouped]
+  );
+
+  const visibleGroups = useMemo(() => {
+    if (selectedCommunity === "all") return grouped;
+    return grouped.filter(([name]) => name === selectedCommunity);
+  }, [grouped, selectedCommunity]);
 
   function updateDraft(
     id: string,
@@ -131,7 +142,24 @@ export function MarketIntelligenceAdminPanel() {
 
   return (
     <div className="space-y-8">
-      {grouped.map(([communityName, rows]) => (
+      <div className="max-w-md">
+        <label className="larssh-label">Community</label>
+        <Select value={selectedCommunity} onValueChange={setSelectedCommunity}>
+          <SelectTrigger className="mt-2">
+            <SelectValue placeholder="Select community" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All communities</SelectItem>
+            {communityNames.map((name) => (
+              <SelectItem key={name} value={name}>
+                {name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {visibleGroups.map(([communityName, rows]) => (
         <section key={communityName} className="larssh-card overflow-hidden rounded-2xl">
           <div className="border-b border-white/5 bg-gradient-to-r from-gold/[0.04] to-transparent px-5 py-4 md:px-6">
             <h2 className="text-lg font-semibold">{communityName}</h2>

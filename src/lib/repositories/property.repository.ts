@@ -281,11 +281,9 @@ export async function querySearchProperties(
 }
 
 export async function fetchSearchPageData(filters: SearchFiltersInput = {}) {
-  const [properties, communities, buildings] = await Promise.all([
-    querySearchProperties(filters),
-    getCommunityOptions(),
-    getBuildingOptions(filters.communityId),
-  ]);
+  const properties = await querySearchProperties(filters);
+  const communities = await getCommunityOptions();
+  const buildings = await getBuildingOptions(filters.communityId);
 
   return { properties, communities, buildings };
 }

@@ -25,11 +25,9 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [stats, content, shellUser] = await Promise.all([
-    getDashboardStatistics(),
-    getDashboardPageContent(),
-    getShellUser(),
-  ]);
+  const shellUser = await getShellUser();
+  const stats = await getDashboardStatistics();
+  const content = await getDashboardPageContent();
 
   return (
     <div className="larssh-page">

@@ -147,7 +147,6 @@ model Community {
   masterCommunity MasterCommunity @relation(fields: [masterCommunityId], references: [id], onDelete: Restrict)
   buildings       Building[]
   properties      Property[]
-  intelligenceCms   CommunityIntelligenceCms?
 
   @@unique([masterCommunityId, slug])
   @@index([masterCommunityId])
@@ -708,75 +707,6 @@ model CommunityMarketIntelligence {
   @@unique([communitySlug, bedroomCount])
   @@index([communitySlug])
   @@map("community_market_intelligence")
-}
-
-/// Manual market intelligence CMS — one profile per community (admin-managed).
-model CommunityIntelligenceCms {
-  id          String @id @default(uuid()) @db.Uuid
-  communityId String @unique @map("community_id") @db.Uuid
-
-  communityName     String  @map("community_name")
-  overview          String? @db.Text
-  investmentSummary String? @map("investment_summary") @db.Text
-  bestFor           String? @map("best_for") @db.Text
-  pros              Json?
-  cons              Json?
-  marketNotes       String? @map("market_notes") @db.Text
-
-  averageSalePriceAed      Decimal?           @map("average_sale_price_aed") @db.Decimal(14, 2)
-  averageRentAedYear       Decimal?           @map("average_rent_aed_year") @db.Decimal(14, 2)
-  averagePricePerSqftAed   Decimal?           @map("average_price_per_sqft_aed") @db.Decimal(10, 2)
-  averageRoiPercent        Decimal?           @map("average_roi_percent") @db.Decimal(5, 2)
-  capitalAppreciationPercent Decimal?         @map("capital_appreciation_percent") @db.Decimal(5, 2)
-  rentalDemand             MarketDemandLevel? @map("rental_demand")
-  occupancyRatePercent     Decimal?           @map("occupancy_rate_percent") @db.Decimal(5, 2)
-  luxuryScore              Int?               @map("luxury_score")
-  familyScore              Int?               @map("family_score")
-  investmentScore          Int?               @map("investment_score")
-  lifestyleScore           Int?               @map("lifestyle_score")
-  walkability              String?
-  beachAccess              String?            @map("beach_access")
-  shortTermRentalScore     Int?               @map("short_term_rental_score")
-  longTermRentalScore      Int?               @map("long_term_rental_score")
-
-  nearbySchools      Json? @map("nearby_schools")
-  nearbyHospitals    Json? @map("nearby_hospitals")
-  nearbyRestaurants  Json? @map("nearby_restaurants")
-  nearbySupermarkets Json? @map("nearby_supermarkets")
-  nearbyHotels       Json? @map("nearby_hotels")
-  nearbyShopping     Json? @map("nearby_shopping")
-
-  hiddenMarketInsights      String? @map("hidden_market_insights") @db.Text
-  futureDevelopments        String? @map("future_developments") @db.Text
-  thingsBuyersShouldKnow    String? @map("things_buyers_should_know") @db.Text
-  thingsInvestorsShouldKnow String? @map("things_investors_should_know") @db.Text
-
-  updatedByEmail String? @map("updated_by_email")
-  updatedByName  String? @map("updated_by_name")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  community Community                        @relation(fields: [communityId], references: [id], onDelete: Cascade)
-  unitTypes CommunityIntelligenceUnitBenchmark[]
-
-  @@index([communityName])
-  @@map("community_intelligence_cms")
-}
-
-model CommunityIntelligenceUnitBenchmark {
-  id       String                    @id @default(uuid()) @db.Uuid
-  cmsId    String                    @map("cms_id") @db.Uuid
-  unitType IntelligenceUnitCategory @map("unit_type")
-
-  averageSalePriceAed    Decimal? @map("average_sale_price_aed") @db.Decimal(14, 2)
-  averageRentAedYear     Decimal? @map("average_rent_aed_year") @db.Decimal(14, 2)
-  averagePricePerSqftAed Decimal? @map("average_price_per_sqft_aed") @db.Decimal(10, 2)
-
-  cms CommunityIntelligenceCms @relation(fields: [cmsId], references: [id], onDelete: Cascade)
-
-  @@unique([cmsId, unitType])
-  @@map("community_intelligence_unit_benchmarks")
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

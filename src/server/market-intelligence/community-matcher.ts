@@ -1,6 +1,7 @@
 const COMMUNITY_SLUG_MATCHERS: Array<{ pattern: string; slug: string }> = [
   { pattern: "royal breeze", slug: "royal-breeze" },
   { pattern: "bab al bahr", slug: "bab-al-bahr" },
+  { pattern: "bab al bahar", slug: "bab-al-bahr" },
   { pattern: "pacific", slug: "pacific" },
   { pattern: "mina al arab", slug: "mina-al-arab-lagoon" },
   { pattern: "marina residences", slug: "marina-residences" },
@@ -18,7 +19,7 @@ const COMMUNITY_SLUG_MATCHERS: Array<{ pattern: string; slug: string }> = [
 ];
 
 export function resolveCommunitySlug(communityName: string): string | null {
-  const normalized = communityName.toLowerCase().trim();
+  const normalized = communityName.toLowerCase().trim().replace(/-/g, " ");
 
   for (const matcher of COMMUNITY_SLUG_MATCHERS) {
     if (normalized.includes(matcher.pattern)) {

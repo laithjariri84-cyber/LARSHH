@@ -4,72 +4,65 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-/** Supabase session pooler allows very few connections per client/process. */
-const DEFAULT_CONNECTION_LIMIT = "1";
-
-function withPoolParams(url: string): string {
-  try {
-    const parsed = new URL(url);
-    const limit =
-      process.env.PRISMA_CONNECTION_LIMIT?.trim() || DEFAULT_CONNECTION_LIMIT;
-
-    if (!parsed.searchParams.has("connection_limit")) {
-      parsed.searchParams.set("connection_limit", limit);
-    }
-
-    // Transaction pooler (6543) requires pgbouncer mode for Prisma.
-    if (parsed.port === "6543" && !parsed.searchParams.has("pgbouncer")) {
-      parsed.searchParams.set("pgbouncer", "true");
-    }
-
-    return parsed.toString();
-  } catch {
-    return url;
-  }
-}
-
-function resolveDatabaseUrl(): string {
-  const url = process.env.DATABASE_URL?.trim();
-  if (!url) {
-    throw new Error(
-      "DATABASE_URL is not set. Define it in .env.local (see .env.example). " +
-        "Use the Supabase transaction pooler on port 6543 with ?pgbouncer=true."
-    );
-  }
-  return withPoolParams(url);
+/** True when DATABASE_URL is present (value never logged). */
+export function isDatabaseUrlConfigured(): boolean {
+  return Boolean(process.env.DATABASE_URL?.trim());
 }
 
 function createPrismaClient(): PrismaClient {
   return new PrismaClient({
-    datasources: {
-      db: {
-        url: resolveDatabaseUrl(),
-      },
-    },
     log:
       process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-globalForPrisma.prisma = prisma;
+function getPrismaClient(): PrismaClient {
+  if (globalForPrisma.prisma) {
+    return globalForPrisma.prisma;
+  }
+
+  const client = createPrismaClient();
+  globalForPrisma.prisma = client;
+  return client;
+}
 
 /**
- * @deprecated Use `prisma` — single shared client only.
- * Import adapter kept this alias for long transactions on the same pool.
+ * Lazy singleton — importing this module must not instantiate PrismaClient.
+ * Client bundles may import server modules that reference `prisma`; the client
+ * is only created on first server-side property access.
  */
+export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    if (prop === "then") {
+      return undefined;
+    }
+
+    const client = getPrismaClient();
+    const value = client[prop as keyof PrismaClient];
+
+    if (typeof value === "function") {
+      return (value as (...args: unknown[]) => unknown).bind(client);
+    }
+
+    return value;
+  },
+});
+
+/** @deprecated Use `prisma` — single shared client only. */
 export function getDirectPrisma(): PrismaClient {
-  return prisma;
+  return getPrismaClient();
 }
 
 export function getDatabaseUrl(): string {
-  return resolveDatabaseUrl();
+  const url = process.env.DATABASE_URL?.trim();
+  if (!url) {
+    throw new Error(
+      "DATABASE_URL is not set. Define it in .env.local (see .env.example)."
+    );
+  }
+  return url;
 }
 
 export function getDirectDatabaseUrl(): string {
-  const direct = process.env.DIRECT_URL?.trim();
-  if (direct) {
-    return withPoolParams(direct);
-  }
-  return resolveDatabaseUrl();
+  return process.env.DIRECT_URL?.trim() || getDatabaseUrl();
 }
