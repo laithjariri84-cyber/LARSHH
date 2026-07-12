@@ -4,6 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatLabel } from "@/lib/utils";
 import { listCommunityMarketSummaries } from "@/server/market-intelligence/market-intelligence.aggregate";
 
+import { getDashboardQueryScope, listingScopeWhere } from "./dashboard.scope";
+import type { DashboardQueryScope } from "./dashboard.types";
+
 export type DashboardChartPoint = {
   label: string;
   value: number;
@@ -51,8 +54,18 @@ function monthBounds(monthsAgo: number): { start: Date; end: Date } {
   return { start, end };
 }
 
-export async function getDashboardListingTrend(): Promise<DashboardChartPoint[]> {
+async function resolveScope(
+  scope?: DashboardQueryScope
+): Promise<DashboardQueryScope> {
+  return scope ?? (await getDashboardQueryScope());
+}
+
+export async function getDashboardListingTrend(
+  scope?: DashboardQueryScope
+): Promise<DashboardChartPoint[]> {
+  const resolvedScope = await resolveScope(scope);
   const points: DashboardChartPoint[] = [];
+  const agentFilter = listingScopeWhere(resolvedScope);
 
   for (let monthsAgo = 5; monthsAgo >= 0; monthsAgo -= 1) {
     const { start, end } = monthBounds(monthsAgo);
@@ -60,6 +73,7 @@ export async function getDashboardListingTrend(): Promise<DashboardChartPoint[]>
       where: {
         deletedAt: null,
         createdAt: { gte: start, lte: end },
+        ...agentFilter,
       },
     });
 
@@ -72,13 +86,18 @@ export async function getDashboardListingTrend(): Promise<DashboardChartPoint[]>
   return points;
 }
 
-export async function getDashboardMarketMix(): Promise<DashboardChartPoint[]> {
+export async function getDashboardMarketMix(
+  scope?: DashboardQueryScope
+): Promise<DashboardChartPoint[]> {
+  const resolvedScope = await resolveScope(scope);
+  const agentFilter = listingScopeWhere(resolvedScope);
   const [rentals, sales] = await Promise.all([
     prisma.listing.count({
       where: {
         deletedAt: null,
         listingType: ListingType.RENT,
         status: ListingStatus.ACTIVE,
+        ...agentFilter,
       },
     }),
     prisma.listing.count({
@@ -86,6 +105,7 @@ export async function getDashboardMarketMix(): Promise<DashboardChartPoint[]> {
         deletedAt: null,
         listingType: ListingType.SALE,
         status: ListingStatus.ACTIVE,
+        ...agentFilter,
       },
     }),
   ]);
@@ -174,57 +194,68 @@ export async function getDashboardMarketOverview(): Promise<
   ];
 }
 
-export async function getDashboardRecentListings(): Promise<DashboardListingRow[]> {
-  const properties = await prisma.property.findMany({
-    where: { deletedAt: null },
+export async function getDashboardRecentListings(
+  scope?: DashboardQueryScope
+): Promise<DashboardListingRow[]> {
+  const resolvedScope = await resolveScope(scope);
+  const agentFilter = listingScopeWhere(resolvedScope);
+
+  const listings = await prisma.listing.findMany({
+    where: {
+      deletedAt: null,
+      ...agentFilter,
+    },
     include: {
-      community: true,
-      building: true,
-      listings: {
-        where: { deletedAt: null },
-        include: { agent: { include: { user: true } } },
-        orderBy: { updatedAt: "desc" },
-        take: 1,
+      property: {
+        include: {
+          community: true,
+          building: true,
+        },
       },
+      agent: { include: { user: true } },
     },
     orderBy: { updatedAt: "desc" },
     take: 5,
   });
 
-  return properties
-    .filter((property) => property.listings[0])
-    .map((property) => {
-      const listing = property.listings[0]!;
-      const agentName = listing.agent?.user?.fullName ?? "Unassigned";
+  return listings.map((listing) => {
+    const property = listing.property;
+    const agentName = listing.agent?.user?.fullName ?? "Unassigned";
 
-      return {
-        id: property.id,
-        community: property.community.name,
-        building: property.building.name,
-        unit: property.unitNumber ?? "—",
-        type: listing.listingType === ListingType.RENT ? "Rent" : "Sale",
-        price:
-          listing.listingType === ListingType.RENT
-            ? `${formatCurrency(Number(listing.askingPrice), "AED")}/yr`
-            : formatCurrency(Number(listing.askingPrice), "AED"),
-        beds: property.bedrooms ?? 0,
-        sqft: property.areaSqft ? Number(property.areaSqft) : 0,
-        agent: agentName,
-        status:
-          listing.status === ListingStatus.ACTIVE
-            ? "Active"
-            : listing.status === ListingStatus.PENDING
-              ? "Pending"
-              : "Draft",
-      };
-    });
+    return {
+      id: property.id,
+      community: property.community.name,
+      building: property.building.name,
+      unit: property.unitNumber ?? "—",
+      type: listing.listingType === ListingType.RENT ? "Rent" : "Sale",
+      price:
+        listing.listingType === ListingType.RENT
+          ? `${formatCurrency(Number(listing.askingPrice), "AED")}/yr`
+          : formatCurrency(Number(listing.askingPrice), "AED"),
+      beds: property.bedrooms ?? 0,
+      sqft: property.areaSqft ? Number(property.areaSqft) : 0,
+      agent: agentName,
+      status:
+        listing.status === ListingStatus.ACTIVE
+          ? "Active"
+          : listing.status === ListingStatus.PENDING
+            ? "Pending"
+            : "Draft",
+    };
+  });
 }
 
-export async function getDashboardRecentlyUpdated(): Promise<
-  DashboardUpdatedListing[]
-> {
+export async function getDashboardRecentlyUpdated(
+  scope?: DashboardQueryScope
+): Promise<DashboardUpdatedListing[]> {
+  const resolvedScope = await resolveScope(scope);
+  const agentFilter = listingScopeWhere(resolvedScope);
+
   const listings = await prisma.listing.findMany({
-    where: { deletedAt: null },
+    where: {
+      deletedAt: null,
+      ...agentFilter,
+    },
     include: {
       property: {
         include: {
@@ -252,8 +283,12 @@ export async function getDashboardRecentlyUpdated(): Promise<
   }));
 }
 
-export async function getDashboardPriceIndex(): Promise<DashboardChartPoint[]> {
+export async function getDashboardPriceIndex(
+  scope?: DashboardQueryScope
+): Promise<DashboardChartPoint[]> {
+  const resolvedScope = await resolveScope(scope);
   const points: DashboardChartPoint[] = [];
+  const agentFilter = listingScopeWhere(resolvedScope);
 
   for (let monthsAgo = 4; monthsAgo >= 0; monthsAgo -= 1) {
     const { start, end } = monthBounds(monthsAgo);
@@ -262,6 +297,7 @@ export async function getDashboardPriceIndex(): Promise<DashboardChartPoint[]> {
         deletedAt: null,
         listingType: ListingType.SALE,
         createdAt: { gte: start, lte: end },
+        ...agentFilter,
       },
       _avg: { askingPrice: true },
     });

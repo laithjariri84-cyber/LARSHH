@@ -784,9 +784,11 @@ model CommunityIntelligenceUnitBenchmark {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 enum UserRole {
+  FOUNDER
   AGENT
   MANAGER
   ADMIN
+  MEMBER
 }
 
 enum UserStatus {

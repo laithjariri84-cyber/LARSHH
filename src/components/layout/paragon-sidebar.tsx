@@ -13,6 +13,7 @@ import {
 import { Logo } from "@/components/brand/logo";
 import { Input } from "@/components/ui/input";
 import { LARSSH_BRAND } from "@/lib/brand";
+import type { AppRole } from "@/lib/auth/roles";
 import {
   filterSidebarNavGroups,
   isNavItemActive,
@@ -36,7 +37,7 @@ type ParagonSidebarProps = {
   onToggle: () => void;
   onNavigate?: () => void;
   isMobileDrawer?: boolean;
-  showMiAdmin?: boolean;
+  appRole?: AppRole;
 };
 
 function readExpandedGroups(): Record<string, boolean> {
@@ -50,8 +51,8 @@ function readExpandedGroups(): Record<string, boolean> {
   }
 }
 
-function filterGroups(query: string, showMiAdmin: boolean): SidebarNavGroup[] {
-  const groups = filterSidebarNavGroups(showMiAdmin);
+function filterGroups(query: string, appRole: AppRole): SidebarNavGroup[] {
+  const groups = filterSidebarNavGroups(appRole);
   const normalized = query.trim().toLowerCase();
   if (!normalized) return groups;
 
@@ -117,7 +118,7 @@ export function ParagonSidebar({
   onToggle,
   onNavigate,
   isMobileDrawer = false,
-  showMiAdmin = false,
+  appRole = "MEMBER",
 }: ParagonSidebarProps) {
   const pathname = usePathname();
   const [searchQuery, setSearchQuery] = useState("");
@@ -130,13 +131,13 @@ export function ParagonSidebar({
   }, []);
 
   const filteredGroups = useMemo(
-    () => filterGroups(searchQuery, showMiAdmin),
-    [searchQuery, showMiAdmin]
+    () => filterGroups(searchQuery, appRole),
+    [searchQuery, appRole]
   );
 
   const flatItems = useMemo(
-    () => filterSidebarNavGroups(showMiAdmin).flatMap((group) => group.items),
-    [showMiAdmin]
+    () => filterSidebarNavGroups(appRole).flatMap((group) => group.items),
+    [appRole]
   );
 
   function toggleGroup(groupId: string) {

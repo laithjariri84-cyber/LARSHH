@@ -1,8 +1,12 @@
 import { prisma } from "../src/lib/prisma";
 
 import { seedMarketIntelligence } from "./seed-market-intelligence";
+import { seedRoleSystem } from "./seeds/role-system.seed";
 
 async function main() {
+  const roleResult = await seedRoleSystem(prisma);
+  console.log("[seed] Role system:", roleResult);
+
   await seedMarketIntelligence();
 }
 

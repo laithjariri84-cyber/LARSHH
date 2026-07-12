@@ -3,15 +3,13 @@ import type { User } from "@supabase/supabase-js";
 import { cache } from "react";
 
 import { mockUser } from "@/features/dashboard/data/mock-dashboard";
+import { isBenignAuthError } from "@/lib/auth/auth-errors";
+import { getAccountDisplayName } from "@/lib/auth/roles";
+import { getAuthContext } from "@/lib/auth/session";
+import type { AppRole } from "@/lib/auth/roles";
+import { isSupabaseConfigured } from "@/lib/env/config";
 import { isUiOnlyMode } from "@/lib/ui-only";
 import { getInitials } from "@/lib/utils";
-
-function isSupabaseConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
-  );
-}
 
 export const getUser = cache(async (): Promise<User | null> => {
   if (!isSupabaseConfigured()) {
@@ -26,13 +24,17 @@ export const getUser = cache(async (): Promise<User | null> => {
     } = await supabase.auth.getUser();
 
     if (error) {
-      console.error("[auth] getUser:", error.message);
+      if (!isBenignAuthError(error)) {
+        console.error("[auth] getUser:", error.message);
+      }
       return null;
     }
 
     return user;
   } catch (error) {
-    console.error("[auth] getUser failed:", error);
+    if (!isBenignAuthError(error)) {
+      console.error("[auth] getUser failed:", error);
+    }
     return null;
   }
 });
@@ -47,28 +49,30 @@ export type ShellUser = {
   name: string;
   email: string;
   role: string;
+  appRole: AppRole;
   initials: string;
 };
 
 export async function getShellUser(): Promise<ShellUser> {
-  const user = await getUser();
+  const context = await getAuthContext();
 
-  if (user?.email) {
-    const name =
-      (typeof user.user_metadata?.full_name === "string" &&
-        user.user_metadata.full_name.trim()) ||
-      user.email.split("@")[0] ||
-      "User";
-    const role =
-      typeof user.user_metadata?.role === "string" &&
-      user.user_metadata.role.trim()
-        ? user.user_metadata.role
-        : "LARSSH Member";
+  if (context) {
+    const user = await getUser();
+    const metadataName =
+      typeof user?.user_metadata?.full_name === "string"
+        ? user.user_metadata.full_name
+        : null;
+    const name = getAccountDisplayName(
+      context.email,
+      context.appRole,
+      metadataName
+    );
 
     return {
       name,
-      email: user.email,
-      role,
+      email: context.email,
+      role: context.displayTitle,
+      appRole: context.appRole,
       initials: getInitials(name),
     };
   }
@@ -77,7 +81,8 @@ export async function getShellUser(): Promise<ShellUser> {
     return {
       name: mockUser.name,
       email: "",
-      role: mockUser.role,
+      role: "CEO & Founder",
+      appRole: "FOUNDER",
       initials: mockUser.initials,
     };
   }
@@ -85,7 +90,11 @@ export async function getShellUser(): Promise<ShellUser> {
   return {
     name: "User",
     email: "",
-    role: "LARSSH",
+    role: "Member",
+    appRole: "MEMBER",
     initials: "U",
   };
 }
+
+export { getAuthContext, requireFounder, requirePermission } from "@/lib/auth/session";
+export type { AppRole, AuthContext } from "@/lib/auth/session";

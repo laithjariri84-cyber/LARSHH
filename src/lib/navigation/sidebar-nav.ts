@@ -15,14 +15,17 @@ import {
   Users,
 } from "lucide-react";
 
+import type { AppRole } from "@/lib/auth/roles";
+import { hasPermission, type Permission } from "@/lib/auth/permissions";
+
 export type SidebarNavItem = {
   title: string;
   href: string;
   icon: LucideIcon;
   featured?: boolean;
   keywords?: string[];
-  /** Visible only to the market intelligence CMS admin. */
-  miAdminOnly?: boolean;
+  /** User must have at least one of these permissions to see the item. */
+  requiredAnyOf?: Permission[];
 };
 
 export type SidebarNavGroup = {
@@ -43,6 +46,7 @@ export const sidebarNavGroups: SidebarNavGroup[] = [
         href: "/dashboard",
         icon: LayoutDashboard,
         keywords: ["overview", "stats"],
+        requiredAnyOf: ["access.dashboard"],
       },
       {
         title: "Property Intelligence",
@@ -50,12 +54,14 @@ export const sidebarNavGroups: SidebarNavGroup[] = [
         icon: Radar,
         featured: true,
         keywords: ["ai", "terminal", "analysis"],
+        requiredAnyOf: ["access.intelligence"],
       },
       {
         title: "Favorites",
         href: "/favorites",
         icon: Heart,
         keywords: ["saved", "bookmarks"],
+        requiredAnyOf: ["access.favorites"],
       },
     ],
   },
@@ -69,18 +75,21 @@ export const sidebarNavGroups: SidebarNavGroup[] = [
         href: "/search",
         icon: Search,
         keywords: ["listings", "find", "filter"],
+        requiredAnyOf: ["access.search"],
       },
       {
         title: "Import Listings",
         href: "/import",
         icon: Upload,
         keywords: ["upload", "csv", "pf expert"],
+        requiredAnyOf: ["access.import"],
       },
       {
         title: "Communities",
         href: "/communities",
         icon: Building2,
         keywords: ["projects", "developments"],
+        requiredAnyOf: ["access.communities"],
       },
     ],
   },
@@ -94,6 +103,7 @@ export const sidebarNavGroups: SidebarNavGroup[] = [
         href: "/crm",
         icon: Briefcase,
         keywords: ["leads", "deals", "tasks", "viewings"],
+        requiredAnyOf: ["access.crm"],
       },
     ],
   },
@@ -107,12 +117,14 @@ export const sidebarNavGroups: SidebarNavGroup[] = [
         href: "/market",
         icon: LineChart,
         keywords: ["pricing", "benchmarks", "roi"],
+        requiredAnyOf: ["access.market.read"],
       },
       {
         title: "Market Analysis",
         href: "/market-analysis",
         icon: BarChart3,
         keywords: ["reports", "trends"],
+        requiredAnyOf: ["access.analytics", "access.market.read"],
       },
     ],
   },
@@ -126,7 +138,7 @@ export const sidebarNavGroups: SidebarNavGroup[] = [
         href: "/admin/market-intelligence",
         icon: Shield,
         keywords: ["admin", "cms", "benchmarks", "community intelligence"],
-        miAdminOnly: true,
+        requiredAnyOf: ["access.market_intelligence.cms"],
       },
     ],
   },
@@ -140,12 +152,14 @@ export const sidebarNavGroups: SidebarNavGroup[] = [
         href: "/agents",
         icon: Users,
         keywords: ["team", "brokers"],
+        requiredAnyOf: ["access.users"],
       },
       {
         title: "Settings",
         href: "/settings",
         icon: Settings,
         keywords: ["preferences", "account"],
+        requiredAnyOf: ["access.settings"],
       },
     ],
   },
@@ -162,13 +176,19 @@ const exactMatchRoutes = new Set([
   "/admin/market-intelligence",
 ]);
 
-export function filterSidebarNavGroups(showMiAdmin: boolean): SidebarNavGroup[] {
+function canSeeNavItem(item: SidebarNavItem, role: AppRole): boolean {
+  if (!item.requiredAnyOf?.length) {
+    return true;
+  }
+
+  return item.requiredAnyOf.some((permission) => hasPermission(role, permission));
+}
+
+export function filterSidebarNavGroups(role: AppRole): SidebarNavGroup[] {
   return sidebarNavGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter(
-        (item) => !item.miAdminOnly || showMiAdmin
-      ),
+      items: group.items.filter((item) => canSeeNavItem(item, role)),
     }))
     .filter((group) => group.items.length > 0);
 }

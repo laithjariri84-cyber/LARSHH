@@ -15,10 +15,9 @@ import { UserMenu } from "./user-menu";
 type ParagonShellProps = {
   children: React.ReactNode;
   user: ShellUser;
-  showMiAdmin?: boolean;
 };
 
-export function ParagonShell({ children, user, showMiAdmin = false }: ParagonShellProps) {
+export function ParagonShell({ children, user }: ParagonShellProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -70,7 +69,7 @@ export function ParagonShell({ children, user, showMiAdmin = false }: ParagonShe
         <ParagonSidebar
           collapsed={collapsed}
           onToggle={toggleCollapsed}
-          showMiAdmin={showMiAdmin}
+          appRole={user.appRole}
         />
       </div>
 
@@ -88,7 +87,7 @@ export function ParagonShell({ children, user, showMiAdmin = false }: ParagonShe
               isMobileDrawer
               onToggle={closeMobileDrawer}
               onNavigate={closeMobileDrawer}
-              showMiAdmin={showMiAdmin}
+              appRole={user.appRole}
             />
           </div>
         </div>

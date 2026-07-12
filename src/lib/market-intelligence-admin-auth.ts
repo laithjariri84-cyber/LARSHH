@@ -1,7 +1,10 @@
 import { getUser } from "@/lib/auth";
+import { requireFounder, isFounder } from "@/lib/auth/session";
 
-export const MARKET_INTELLIGENCE_ADMIN_EMAIL = "alliath.musa@paragonrak.com";
+/** @deprecated Use isFounder() from @/lib/auth/session */
+export const MARKET_INTELLIGENCE_ADMIN_EMAIL = "laithjariri84@gmail.com";
 
+/** @deprecated Use isFounder() */
 export function isMarketIntelligenceAdminEmail(
   email: string | null | undefined
 ): boolean {
@@ -9,16 +12,18 @@ export function isMarketIntelligenceAdminEmail(
   return email.trim().toLowerCase() === MARKET_INTELLIGENCE_ADMIN_EMAIL;
 }
 
+/** Founder-only access for Market Intelligence CMS. */
 export async function isMarketIntelligenceAdmin(): Promise<boolean> {
-  const user = await getUser();
-  return isMarketIntelligenceAdminEmail(user?.email);
+  return isFounder();
 }
 
+/** Founder-only access for Market Intelligence CMS mutations. */
 export async function requireMarketIntelligenceAdmin() {
+  await requireFounder();
   const user = await getUser();
-  if (!user || !isMarketIntelligenceAdminEmail(user.email)) {
-    const error = new Error("Forbidden");
-    (error as Error & { status: number }).status = 403;
+  if (!user) {
+    const error = new Error("Unauthorized");
+    (error as Error & { status: number }).status = 401;
     throw error;
   }
   return user;

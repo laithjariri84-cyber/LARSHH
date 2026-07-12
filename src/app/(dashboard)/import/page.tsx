@@ -1,10 +1,20 @@
 import type { Metadata } from "next";
 
+import { ForbiddenPanel } from "@/components/auth/forbidden-panel";
 import { ImportWorkflow } from "@/features/import/components/import-workflow";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getAuthContext } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Import Listings" };
 
-export default function ImportPage() {
+export default async function ImportPage() {
+  const context = await getAuthContext();
+  if (!context || !hasPermission(context.appRole, "access.import")) {
+    return (
+      <ForbiddenPanel message="Listing import is restricted to Founder and Admin roles." />
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
       <div>

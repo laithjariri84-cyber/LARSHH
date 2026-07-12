@@ -3,13 +3,22 @@ import Link from "next/link";
 
 import { Database, Settings } from "lucide-react";
 
+import { ForbiddenPanel } from "@/components/auth/forbidden-panel";
 import { Button } from "@/components/ui/button";
-import { isMarketIntelligenceAdmin } from "@/lib/market-intelligence-admin-auth";
+import { hasPermission } from "@/lib/auth/permissions";
+import { getAuthContext } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  const showMiAdmin = await isMarketIntelligenceAdmin();
+  const context = await getAuthContext();
+  if (!context || !hasPermission(context.appRole, "access.settings")) {
+    return (
+      <ForbiddenPanel message="You do not have permission to view settings." />
+    );
+  }
+
+  const showCmsLink = hasPermission(context.appRole, "access.market_intelligence.cms");
 
   return (
     <div className="larssh-page space-y-6">
@@ -26,7 +35,7 @@ export default async function SettingsPage() {
         </p>
       </div>
 
-      {showMiAdmin ? (
+      {showCmsLink ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <section className="larssh-card larssh-card-hover rounded-2xl p-5">
             <div className="flex items-start gap-3">

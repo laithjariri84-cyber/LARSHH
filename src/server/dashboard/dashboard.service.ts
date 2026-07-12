@@ -1,14 +1,8 @@
-import { getUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { isUiOnlyMode } from "@/lib/ui-only";
-import { cache } from "react";
 
 import { fetchDashboardMetrics } from "./dashboard.repository";
-import type {
-  DashboardQueryScope,
-  DashboardStat,
-  DashboardStatTrend,
-} from "./dashboard.types";
+import { getDashboardQueryScope } from "./dashboard.scope";
+import type { DashboardStat, DashboardStatTrend } from "./dashboard.types";
 
 function formatGrowthPercent(
   currentMonth: number,
@@ -32,32 +26,6 @@ function formatGrowthPercent(
   };
 }
 
-const resolveAgentId = cache(async (userId: string): Promise<string | null> => {
-  const agent = await prisma.agent.findUnique({
-    where: { userId },
-    select: { id: true },
-  });
-  return agent?.id ?? null;
-});
-
-async function resolveDashboardScope(): Promise<DashboardQueryScope> {
-  if (isUiOnlyMode()) {
-    return {};
-  }
-
-  const user = await getUser();
-  if (!user) {
-    return {};
-  }
-
-  const agentId = await resolveAgentId(user.id);
-  if (!agentId) {
-    return {};
-  }
-
-  return { agentId };
-}
-
 const UI_ONLY_DASHBOARD_STATS: DashboardStat[] = [
   { label: "Active Listings", value: "248", change: "+12%", trend: "up" },
   { label: "Rentals", value: "156", change: "+8%", trend: "up" },
@@ -72,7 +40,9 @@ const EMPTY_DASHBOARD_STATS: DashboardStat[] = [
   { label: "Communities", value: "0", change: "—", trend: "neutral" },
 ];
 
-function buildDashboardStats(metrics: Awaited<ReturnType<typeof fetchDashboardMetrics>>): DashboardStat[] {
+function buildDashboardStats(
+  metrics: Awaited<ReturnType<typeof fetchDashboardMetrics>>
+): DashboardStat[] {
   const activeGrowth = formatGrowthPercent(
     metrics.currentMonthListings,
     metrics.previousMonthListings
@@ -124,7 +94,7 @@ export async function getDashboardStatistics(): Promise<DashboardStat[]> {
   }
 
   try {
-    const scope = await resolveDashboardScope();
+    const scope = await getDashboardQueryScope();
     const metrics = await fetchDashboardMetrics(scope);
     return buildDashboardStats(metrics);
   } catch (error) {

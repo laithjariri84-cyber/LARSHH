@@ -55,6 +55,10 @@ function mapDashboardMetricsRow(row: DashboardMetricsRow | undefined): Dashboard
 export async function queryDashboardMetrics(
   scope: DashboardQueryScope
 ): Promise<DashboardMetrics> {
+  if (scope.noListings) {
+    return mapDashboardMetricsRow(undefined);
+  }
+
   const agentClause = scope.agentId
     ? Prisma.sql`AND l.agent_id = ${scope.agentId}::uuid`
     : Prisma.empty;
@@ -82,16 +86,16 @@ export async function queryDashboardMetrics(
     )
     SELECT
       COUNT(DISTINCT sl.property_id) FILTER (
-        WHERE sl.status = ${ListingStatus.ACTIVE}
+        WHERE sl.status = ${ListingStatus.ACTIVE}::"ListingStatus"
       )::int AS active_listings,
       COUNT(DISTINCT sl.property_id) FILTER (
-        WHERE sl.listing_type = ${ListingType.RENT}
+        WHERE sl.listing_type = ${ListingType.RENT}::"ListingType"
       )::int AS rentals,
       COUNT(DISTINCT sl.property_id) FILTER (
-        WHERE sl.listing_type = ${ListingType.SALE}
+        WHERE sl.listing_type = ${ListingType.SALE}::"ListingType"
       )::int AS sales,
       COUNT(DISTINCT sl.community_id) FILTER (
-        WHERE sl.status = ${ListingStatus.ACTIVE}
+        WHERE sl.status = ${ListingStatus.ACTIVE}::"ListingStatus"
       )::int AS communities,
       COUNT(*) FILTER (
         WHERE sl.created_at >= mb.curr_start AND sl.created_at <= mb.curr_end
@@ -102,22 +106,22 @@ export async function queryDashboardMetrics(
       COUNT(*) FILTER (
         WHERE sl.created_at >= mb.curr_start
           AND sl.created_at <= mb.curr_end
-          AND sl.listing_type = ${ListingType.RENT}
+          AND sl.listing_type = ${ListingType.RENT}::"ListingType"
       )::int AS current_month_rentals,
       COUNT(*) FILTER (
         WHERE sl.created_at >= mb.prev_start
           AND sl.created_at <= mb.prev_end
-          AND sl.listing_type = ${ListingType.RENT}
+          AND sl.listing_type = ${ListingType.RENT}::"ListingType"
       )::int AS previous_month_rentals,
       COUNT(*) FILTER (
         WHERE sl.created_at >= mb.curr_start
           AND sl.created_at <= mb.curr_end
-          AND sl.listing_type = ${ListingType.SALE}
+          AND sl.listing_type = ${ListingType.SALE}::"ListingType"
       )::int AS current_month_sales,
       COUNT(*) FILTER (
         WHERE sl.created_at >= mb.prev_start
           AND sl.created_at <= mb.prev_end
-          AND sl.listing_type = ${ListingType.SALE}
+          AND sl.listing_type = ${ListingType.SALE}::"ListingType"
       )::int AS previous_month_sales,
       COUNT(DISTINCT sl.community_id) FILTER (
         WHERE sl.created_at >= mb.curr_start AND sl.created_at <= mb.curr_end

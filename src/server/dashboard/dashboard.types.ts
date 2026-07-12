@@ -9,6 +9,8 @@ export type DashboardStat = {
 
 export type DashboardQueryScope = {
   agentId?: string;
+  /** When true, listing widgets and metrics return empty/zero (founder admin view). */
+  noListings?: boolean;
 };
 
 export type MonthCountPair = {

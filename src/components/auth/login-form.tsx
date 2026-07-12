@@ -20,6 +20,12 @@ export function LoginForm() {
     "/dashboard"
   );
 
+  const configError = searchParams.get("error");
+  const setupHint =
+    configError === "supabase_not_configured"
+      ? "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local and restart the dev server."
+      : null;
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,20 +36,40 @@ export function LoginForm() {
     setError(null);
     setIsLoading(true);
 
-    const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (signInError) {
-      setError(signInError.message);
+      if (signInError) {
+        setError(signInError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // Sync Prisma user/roles immediately so dashboard and CMS work on first load.
+      await fetch("/auth/sync", { method: "POST", credentials: "include" });
+
+      router.push(redirectTo as Route);
+      router.refresh();
+    } catch (caught) {
+      const message =
+        caught instanceof Error ? caught.message : "Sign in failed";
+      if (message.includes("NEXT_PUBLIC_SUPABASE")) {
+        setError(
+          "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart the dev server."
+        );
+      } else if (message.toLowerCase().includes("failed to fetch")) {
+        setError(
+          "Cannot reach Supabase. Check NEXT_PUBLIC_SUPABASE_URL and your network connection."
+        );
+      } else {
+        setError(message);
+      }
       setIsLoading(false);
-      return;
     }
-
-    router.push(redirectTo as Route);
-    router.refresh();
   }
 
   return (
@@ -90,6 +116,11 @@ export function LoginForm() {
             className="border-input bg-background/60"
           />
         </div>
+        {setupHint ? (
+          <p className="text-muted-foreground rounded-lg border border-border bg-muted/40 p-3 text-sm">
+            {setupHint}
+          </p>
+        ) : null}
         {error ? <p className="text-destructive text-sm">{error}</p> : null}
         <Button type="submit" disabled={isLoading} className="larssh-gold-btn h-11 rounded-xl">
           {isLoading ? (

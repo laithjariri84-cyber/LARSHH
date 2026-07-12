@@ -1,11 +1,3 @@
-import {
-  listingTrendData,
-  marketMixData,
-  marketOverview,
-  priceIndexData,
-  recentListings,
-  recentlyUpdated,
-} from "@/features/dashboard/data/mock-dashboard";
 import { quickActions } from "@/features/dashboard/data/dashboard-actions";
 import { isUiOnlyMode } from "@/lib/ui-only";
 
@@ -21,6 +13,7 @@ import {
   type DashboardMarketOverviewCard,
   type DashboardUpdatedListing,
 } from "./dashboard.content";
+import { getDashboardQueryScope } from "./dashboard.scope";
 
 export type DashboardPageContent = {
   recentListings: DashboardListingRow[];
@@ -32,22 +25,40 @@ export type DashboardPageContent = {
   quickActions: typeof quickActions;
 };
 
-const MOCK_PAGE_CONTENT: DashboardPageContent = {
-  recentListings,
-  recentlyUpdated,
-  marketOverview,
-  listingTrend: listingTrendData,
-  marketMix: marketMixData,
-  priceIndex: priceIndexData,
+const EMPTY_PAGE_CONTENT: DashboardPageContent = {
+  recentListings: [],
+  recentlyUpdated: [],
+  marketOverview: [],
+  listingTrend: [],
+  marketMix: [],
+  priceIndex: [],
   quickActions,
 };
 
 export async function getDashboardPageContent(): Promise<DashboardPageContent> {
   if (isUiOnlyMode()) {
-    return MOCK_PAGE_CONTENT;
+    const {
+      listingTrendData,
+      marketMixData,
+      marketOverview,
+      priceIndexData,
+      recentListings,
+      recentlyUpdated,
+    } = await import("@/features/dashboard/data/mock-dashboard");
+
+    return {
+      recentListings,
+      recentlyUpdated,
+      marketOverview,
+      listingTrend: listingTrendData,
+      marketMix: marketMixData,
+      priceIndex: priceIndexData,
+      quickActions,
+    };
   }
 
   try {
+    const scope = await getDashboardQueryScope();
     const [
       recentListingsRows,
       recentlyUpdatedRows,
@@ -56,12 +67,12 @@ export async function getDashboardPageContent(): Promise<DashboardPageContent> {
       marketMix,
       priceIndex,
     ] = await Promise.all([
-      getDashboardRecentListings(),
-      getDashboardRecentlyUpdated(),
+      getDashboardRecentListings(scope),
+      getDashboardRecentlyUpdated(scope),
       getDashboardMarketOverview(),
-      getDashboardListingTrend(),
-      getDashboardMarketMix(),
-      getDashboardPriceIndex(),
+      getDashboardListingTrend(scope),
+      getDashboardMarketMix(scope),
+      getDashboardPriceIndex(scope),
     ]);
 
     return {
@@ -75,6 +86,6 @@ export async function getDashboardPageContent(): Promise<DashboardPageContent> {
     };
   } catch (error) {
     console.error("[dashboard] getDashboardPageContent:", error);
-    return MOCK_PAGE_CONTENT;
+    return EMPTY_PAGE_CONTENT;
   }
 }

@@ -1,5 +1,6 @@
 import { MarketIntelligenceCmsPanel } from "@/features/market-intelligence-admin/components/market-intelligence-cms-panel";
-import { isMarketIntelligenceAdmin } from "@/lib/market-intelligence-admin-auth";
+import { ForbiddenPanel } from "@/components/auth/forbidden-panel";
+import { isFounder } from "@/lib/auth/session";
 
 export const metadata = {
   title: "Market Intelligence",
@@ -8,22 +9,10 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminMarketIntelligencePage() {
-  const allowed = await isMarketIntelligenceAdmin();
+  const allowed = await isFounder();
   if (!allowed) {
     return (
-      <div className="larssh-page flex min-h-[50vh] flex-col items-center justify-center text-center">
-        <div className="larssh-card max-w-lg rounded-2xl p-8">
-          <p className="text-gold text-sm font-medium tracking-wide uppercase">
-            403 Unauthorized
-          </p>
-          <h1 className="mt-3 text-2xl font-semibold tracking-tight">
-            Access denied
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            You do not have permission to manage market intelligence in LARSSH.
-          </p>
-        </div>
-      </div>
+      <ForbiddenPanel message="Only the Founder can manage Market Intelligence CMS profiles." />
     );
   }
 
